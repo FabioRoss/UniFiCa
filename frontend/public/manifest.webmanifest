@@ -1,0 +1,23 @@
+{
+  "name": "Open Unifi: novità UniFI",
+  "short_name": "Open Unifi",
+  "description": "Notizie, modifiche e appelli dai siti dell'Università di Firenze, con notifiche push.",
+  "lang": "it",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f8ff",
+  "theme_color": "#1d4ed8",
+  "categories": ["education", "news"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Appelli", "url": "/esami", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Link utili", "url": "/link", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

@@ -1,0 +1,35 @@
+# Open Unifi: one container (API + scheduler + Telegram bot + PWA) with its
+# SQLite database in a named volume. Publishes NO host ports: the shared Caddy
+# in /srv/edge terminates TLS (Let's Encrypt) and reverse-proxies to
+# openunifi-app over the external `edge` network. See deploy/DEPLOY.md.
+#
+#   Start:  docker compose up -d --build
+#   Logs:   docker compose logs -f openunifi-app
+
+name: openunifi
+
+services:
+  openunifi-app:
+    build: .
+    container_name: openunifi-app   # must match the upstream in the edge Caddyfile
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - data:/data                  # DB + generated VAPID keys: back this up
+    expose:
+      - "8000"
+    networks:
+      - edge
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  edge:
+    external: true      # created once: `docker network create edge`
+
+volumes:
+  data:

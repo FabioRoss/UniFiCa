@@ -1,0 +1,110 @@
+import pytest
+from fastapi.testclient import TestClient
+
+from app.config import settings
+
+H = {"x-openunifi": "1"}
+
+
+@pytest.fixture()
+def client(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "data_dir", str(tmp_path))
+    monkeypatch.setattr(settings, "scheduler_enabled", False)
+    monkeypatch.setattr(settings, "telegram_bot_token", "")
+    monkeypatch.setattr(settings, "admin_password", "segreta")
+    monkeypatch.setattr(settings, "frontend_dist", str(tmp_path / "dist"))
+    from app.main import app
+
+    with TestClient(app) as c:
+        yield c
+
+
+def _add_item(text="Prima versione"):
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.models import Item, Source
+    from app.scraper.engine import apply_snapshot
+    from app.scraper.parsers import Snapshot
+
+    db = SessionLocal()
+    src = db.scalar(select(Source).where(Source.slug == "medicina-news"))
+    prev = db.scalar(select(Item).where(Item.url == "https://x/a"))
+    v = apply_snapshot(db, src, Snapshot(url="https://x/a", title="Avviso esami", content_text=text),
+                       [], prev, baseline=False)
+    db.commit()
+    item_id = v.item.id
+    db.close()
+    return item_id
+
+
+def test_public_endpoints(client):
+    cfg = client.get("/api/config").json()
+    assert len(cfg["vapid_public_key"]) > 80
+    assert any(s["slug"] == "medicina-news" for s in client.get("/api/sources").json())
+    assert len(client.get("/api/links").json()) >= 3
+
+    item_id = _add_item()
+    _add_item("Seconda versione con una riga in più\nnuova riga")
+    feed = client.get("/api/feed").json()["entries"]
+    assert [e["kind"] for e in feed] == ["modified", "new"]
+    assert client.get("/api/feed", params={"q": "esami"}).json()["entries"]
+    assert not client.get("/api/feed", params={"q": "inesistente"}).json()["entries"]
+
+    detail = client.get(f"/api/items/{item_id}").json()
+    assert len(detail["versions"]) == 2
+    diff = client.get(f"/api/items/{item_id}/versions/2/diff").json()
+    assert any(r["op"] in ("add", "change") for r in diff["text"])
+
+    rss = client.get("/rss.xml")
+    assert rss.status_code == 200 and "Avviso esami" in rss.text
+    assert client.get("/rss/medicina-news.xml").status_code == 200
+    assert client.get("/api/exams").json()["exams"] == []
+
+
+def test_push_subscription_lifecycle(client):
+    sub = {"endpoint": "https://fcm.googleapis.com/fcm/send/abc", "keys": {"p256dh": "k", "auth": "a"}}
+    r = client.post("/api/subscription/push", json={"subscription": sub, "platform": "ios"}).json()
+    token = r["token"]
+    assert r["prefs"]["sources"] is None
+    r = client.put(f"/api/subscription/{token}", json={"prefs": {"sources": [1], "keywords": ["tirocinio"]}}).json()
+    assert r["prefs"]["sources"] == [1] and r["prefs"]["keywords"] == ["tirocinio"]
+    # same endpoint again keeps the same token
+    assert client.post("/api/subscription/push", json={"subscription": sub}).json()["token"] == token
+    assert client.delete(f"/api/subscription/{token}").json()["ok"]
+    assert client.get(f"/api/subscription/{token}").status_code == 404
+
+
+def test_admin(client):
+    assert client.get("/api/admin/stats").status_code == 401
+    assert client.post("/api/admin/login", json={"username": "admin", "password": "no"}, headers=H).status_code == 401
+    assert client.post("/api/admin/login", json={"username": "admin", "password": "segreta"}).status_code == 403
+    assert client.post("/api/admin/login", json={"username": "admin", "password": "segreta"}, headers=H).status_code == 200
+
+    stats = client.get("/api/admin/stats").json()
+    assert stats["subscribers"]["total"] == 0 and len(stats["sources"]) >= 2
+
+    g = client.post("/api/admin/link-groups", json={"name": "Prova"}, headers=H).json()
+    link = client.post("/api/admin/links", json={"group_id": g["id"], "title": "Mensa", "url": "https://dsu.it"},
+                       headers=H).json()
+    assert client.post("/api/admin/links", json={"group_id": g["id"], "title": "X", "url": "javascript:alert(1)"},
+                       headers=H).status_code == 422
+    assert client.delete(f"/api/admin/links/{link['id']}").status_code == 403  # missing header
+    assert client.delete(f"/api/admin/links/{link['id']}", headers=H).json()["ok"]
+
+    s = client.post("/api/admin/sources", headers=H, json={
+        "name": "Nuova fonte", "kind": "page", "parser": "page", "url": "https://www.unifi.it/x"}).json()
+    assert s["slug"] == "nuova-fonte" and not s["baseline_done"]
+    assert client.post("/api/admin/sources", headers=H, json={
+        "name": "Sbagliata", "kind": "page", "parser": "unifi_news", "url": "https://a.it"}).status_code == 422
+
+    site = client.put("/api/admin/settings", headers=H, json={"intro": "Ciao"}).json()
+    assert site["intro"] == "Ciao"
+    assert client.get("/api/config").json()["site"]["intro"] == "Ciao"
+
+
+def test_password_hash():
+    from app.security import hash_password, verify_password
+
+    h = hash_password("abc")
+    assert "$" not in h and verify_password("abc", h) and not verify_password("abd", h)
