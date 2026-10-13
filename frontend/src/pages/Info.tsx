@@ -51,10 +51,7 @@ export default function Info() {
       <section className="card p-5 sm:p-6">
         <h2 className="mb-2 text-lg font-bold">Privacy</h2>
         <p className="text-[15px] leading-relaxed muted">
-          Nessun account. Per le notifiche nel browser salviamo solo l'indirizzo tecnico fornito dal browser e le tue
-          preferenze, senza dati personali. Con Telegram salviamo l'id della chat, il nome e lo username pubblici del
-          tuo profilo Telegram (visibili solo all'amministratore) e le tue preferenze. Disattivando le notifiche del browser
-          i dati vengono cancellati; su Telegram /stop mette in pausa e /cancella cancella tutto.
+          Nessun account e nessun dato personale: per le notifiche salviamo solo l'indirizzo tecnico fornito dal browser (o l'id della chat Telegram) e le tue preferenze. Disattivando le notifiche vengono cancellati.
         </p>
       </section>
 
