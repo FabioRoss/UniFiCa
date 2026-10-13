@@ -7,6 +7,7 @@ import { useFetch } from "../lib/useFetch";
 interface Sub {
   id: number; channel: "push" | "telegram"; platform: string; active: boolean; is_admin: boolean; created_at: string;
   last_active_at: string; last_sent_at: string | null; failures: number; sources: string; keywords: string[]; mode: string;
+  telegram: { chat_id: string; username: string; name: string } | null;
 }
 
 const MODE: Record<string, string> = { instant: "subito", quiet: "silenzio notturno", digest: "riepilogo" };
@@ -24,7 +25,7 @@ export default function Subscribers() {
   };
   return (
     <div>
-      <PageTitle title="Iscritti" subtitle="Anonimi: nessun nome o email, solo il canale e le preferenze." />
+      <PageTitle title="Iscritti" subtitle="Notifiche web anonime. Per Telegram: username, nome pubblico e id della chat." />
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : !data?.length ? <Empty icon="users" title="Ancora nessun iscritto">Condividi il link del sito per iniziare.</Empty> : (
         <div className="card overflow-x-auto">
@@ -46,6 +47,16 @@ export default function Subscribers() {
                       {s.is_admin && <Badge>admin</Badge>}
                       {!s.active && <Badge tone="slate">in pausa</Badge>}
                     </span>
+                    {s.telegram && (
+                      <span className="mt-1 block text-xs leading-snug">
+                        {s.telegram.username && (
+                          <a href={`https://t.me/${s.telegram.username}`} target="_blank" rel="noopener noreferrer"
+                            className="font-semibold text-brand-700 hover:underline dark:text-brand-300">@{s.telegram.username}</a>
+                        )}
+                        {s.telegram.name && <span className="block">{s.telegram.name}</span>}
+                        <span className="block font-mono muted">chat {s.telegram.chat_id}</span>
+                      </span>
+                    )}
                   </td>
                   <td className="max-w-[260px] p-3">
                     <p className="truncate">{s.sources}</p>

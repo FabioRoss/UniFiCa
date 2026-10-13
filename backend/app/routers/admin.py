@@ -526,6 +526,9 @@ def list_subscribers(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
             "last_sent_at": iso(s.last_sent_at), "failures": s.failures,
             "sources": "tutte" if p["sources"] is None else ", ".join(names.get(i, "?") for i in p["sources"]),
             "keywords": p["keywords"], "mode": "digest" if p["digest"] else "quiet" if p["quiet"] else "instant",
+            # Telegram: who it is (public @username and name, saved by the bot) and the chat id
+            "telegram": {"chat_id": s.endpoint, "username": (s.keys or {}).get("username") or "",
+                         "name": (s.keys or {}).get("name") or ""} if s.channel == "telegram" else None,
         })
     return out
 

@@ -239,3 +239,47 @@ def test_direct_esse3_checks_can_be_switched_off(client, monkeypatch):
     assert db.get(Source, row["id"]).consecutive_failures == 0
     assert not db.scalars(select(Alert).where(Alert.resolved.is_(False))).all()
     db.close()
+
+
+def test_telegram_profile_in_admin_and_cancella(client, monkeypatch):
+    import asyncio
+
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.models import Subscriber
+    from app.notify import telegram
+
+    sent = []
+
+    async def fake_send(client_, chat_id, text, buttons=None):
+        sent.append((chat_id, text))
+        return "ok"
+
+    async def fake_call(client_, method, **params):
+        assert method == "getChat"
+        return {"id": int(params["chat_id"]), "type": "private", "first_name": "Vecchio", "username": "vecchio_iscritto"}
+
+    monkeypatch.setattr(telegram, "send", fake_send)
+    monkeypatch.setattr(telegram, "call", fake_call)
+    chat = {"id": 4242, "type": "private", "first_name": "Mario", "last_name": "Rossi", "username": "mrossi"}
+    asyncio.run(telegram.handle_message(None, {"chat": chat, "text": "/start"}))
+    # Name changes are picked up on the next message
+    asyncio.run(telegram.handle_message(None, {"chat": {**chat, "username": "mario_r"}, "text": "/stato"}))
+
+    db = SessionLocal()
+    old = Subscriber(channel="telegram", endpoint="777", token="t-old", platform="telegram", prefs={})
+    db.add(old)
+    db.commit()
+    asyncio.run(telegram.backfill_profiles(None))  # subscribers from before this change
+
+    assert _login(client).status_code == 200
+    rows = {r["telegram"]["chat_id"]: r["telegram"] for r in client.get("/api/admin/subscribers").json() if r["telegram"]}
+    assert rows["4242"] == {"chat_id": "4242", "username": "mario_r", "name": "Mario Rossi"}
+    assert rows["777"]["username"] == "vecchio_iscritto"
+
+    asyncio.run(telegram.handle_message(None, {"chat": chat, "text": "/cancella"}))
+    db.expire_all()
+    assert db.scalar(select(Subscriber).where(Subscriber.endpoint == "4242")) is None
+    assert "cancellati" in sent[-1][1]
+    db.close()

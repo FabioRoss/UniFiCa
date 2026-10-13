@@ -92,8 +92,9 @@ HELP = (
     "/impostazioni scegli fonti, parole chiave, orari di silenzio\n"
     "/ultime gli ultimi aggiornamenti\n"
     "/stato le tue impostazioni attuali\n"
-    "/stop non ricevere più notifiche\n"
-    "/start riattiva le notifiche"
+    "/stop metti in pausa le notifiche\n"
+    "/start riattiva le notifiche\n"
+    "/cancella cancella i tuoi dati (chat, nome, preferenze)"
 )
 
 
@@ -127,6 +128,36 @@ def _status_text(db, sub: Subscriber) -> str:  # noqa: ANN001
     return "\n".join(lines)
 
 
+def profile(chat: dict[str, Any]) -> dict[str, str]:
+    """Public @username and name of a private chat, shown in the admin panel."""
+    name = " ".join(x for x in (chat.get("first_name"), chat.get("last_name")) if x)
+    return {"username": chat.get("username") or "", "name": name}
+
+
+def _remember_profile(sub: Subscriber, chat: dict[str, Any]) -> None:
+    p = profile(chat)
+    if (sub.keys or {}) != p:
+        sub.keys = p  # unused for Telegram otherwise (push keys live here for push)
+
+
+async def backfill_profiles(client: httpx.AsyncClient) -> None:
+    """Subscribers from before profiles were saved: ask Telegram once."""
+    db = SessionLocal()
+    try:
+        subs = db.scalars(select(Subscriber).where(Subscriber.channel == "telegram")).all()
+        for sub in subs:
+            if "username" in (sub.keys or {}):
+                continue
+            try:
+                _remember_profile(sub, await call(client, "getChat", chat_id=sub.endpoint))
+                db.commit()
+            except TelegramError as e:
+                log.info("getChat %s failed: %s", sub.endpoint, e)
+            await asyncio.sleep(0.2)
+    finally:
+        db.close()
+
+
 async def handle_message(client: httpx.AsyncClient, msg: dict[str, Any]) -> None:
     chat = msg.get("chat") or {}
     if chat.get("type") != "private":
@@ -139,11 +170,14 @@ async def handle_message(client: httpx.AsyncClient, msg: dict[str, Any]) -> None
     db = SessionLocal()
     try:
         sub = _subscriber(db, chat_id)
+        if sub is not None:
+            _remember_profile(sub, chat)
+            db.commit()
         if cmd == "/start":
             created = sub is None
             if created:
                 sub = Subscriber(channel="telegram", endpoint=chat_id, token=secrets.token_urlsafe(24),
-                                 platform="telegram", prefs={})
+                                 platform="telegram", prefs={}, keys=profile(chat))
                 db.add(sub)
             sub.active = True
             sub.last_active_at = utcnow()
@@ -163,6 +197,11 @@ async def handle_message(client: httpx.AsyncClient, msg: dict[str, Any]) -> None
             return
         sub.last_active_at = utcnow()
         db.commit()
+        if cmd in ("/cancella", "/elimina", "/delete"):
+            db.delete(sub)
+            db.commit()
+            await send(client, chat_id, "Fatto: chat, nome e preferenze cancellati. Scrivi /start se vuoi ricominciare.")
+            return
         if cmd == "/stop":
             sub.active = False
             db.commit()
@@ -229,8 +268,13 @@ async def poll_forever() -> None:
                         {"command": "ultime", "description": "Ultimi aggiornamenti"},
                         {"command": "stato", "description": "Le tue impostazioni"},
                         {"command": "stop", "description": "Metti in pausa le notifiche"},
+                        {"command": "cancella", "description": "Cancella i tuoi dati"},
                     ])
                     await call(client, "deleteWebhook")
+                    try:
+                        await backfill_profiles(client)
+                    except Exception as e:  # never block polling for it
+                        log.warning("telegram profile backfill failed: %s", e)
                 updates = await call(client, "getUpdates", offset=offset, timeout=50,
                                      allowed_updates=["message"])
                 for u in updates:
