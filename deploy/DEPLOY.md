@@ -7,7 +7,7 @@ certificates; Open Unifi publishes no ports and is reached by container name
 
 ```
 /srv/
-├── edge/            ← shared Caddy (from the Halo repo, deploy/edge)
+├── edge/            ← shared Caddy, repo FabioRoss/edge-caddy
 ├── werace-timing/
 ├── halo-f1/
 └── openunifi/       ← this repo
@@ -34,16 +34,17 @@ Check it has propagated (TTL is 15 minutes) before starting Caddy:
 
 ## 2. Add the site to the edge proxy
 
-The Halo repo (`deploy/edge`) already contains the Open Unifi block. On the server:
+The shared proxy lives in its own repo, **FabioRoss/edge-caddy**, which already
+contains the Open Unifi block. If `/srv/edge` on the server is still the old copy
+taken from the Halo repo, first follow that repo's `MIGRATION.md` (it keeps the
+certificates). Then:
 
 ```bash
-cd /srv/edge
-# pull the updated Caddyfile + docker-compose.yml from the Halo repo, or copy them over
-nano .env
+nano /srv/edge/.env
 #   OPENUNIFI_DOMAIN=openunifi.it          (bare domain only; www redirects to it)
 ```
 
-For reference, the block in `/srv/edge/Caddyfile` is:
+For reference, the block in `caddy/Caddyfile` is:
 
 ```caddy
 {$OPENUNIFI_DOMAIN} {
@@ -79,8 +80,8 @@ docker compose logs -f openunifi-app     # first checks start within 30 s
 Then reload the edge proxy so it picks up the new domain:
 
 ```bash
-cd /srv/edge && docker compose up -d
-docker compose logs -f caddy             # watch it obtain the certificate
+/srv/edge/deploy.sh                      # validates, then reloads with no downtime
+cd /srv/edge && docker compose logs -f caddy   # watch it obtain the certificate
 ```
 
 Open `https://<your domain>` and `https://<your domain>/admin`.
@@ -164,4 +165,4 @@ immediately from Admin → Fonti (the refresh button), no terminal needed.
 
 The edge proxy's GoAccess dashboard reads only the Halo log. To get Open Unifi
 stats too, give its Caddy block its own `log { output file /var/log/caddy/openunifi-access.log }`
-and run a second `goaccess` service on that file (see the Halo DEPLOY.md, step 7).
+and run a second `goaccess` service on that file (see the edge-caddy README).
