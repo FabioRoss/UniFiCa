@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import ErrorBoundary from "./components/ErrorBoundary";
 import Layout from "./components/Layout";
 import { Loading } from "./components/ui";
 import { ConfigProvider } from "./lib/app";
@@ -18,18 +19,20 @@ export default function App() {
   return (
     <ConfigProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/admin/*" element={<Suspense fallback={<Loading />}><AdminApp /></Suspense>} />
-          <Route element={<Layout />}>
-            <Route index element={<Feed />} />
-            <Route path="n/:id" element={<ItemPage />} />
-            <Route path="esami" element={<Exams />} />
-            <Route path="notifiche" element={<Notifications />} />
-            <Route path="link" element={<Links />} />
-            <Route path="info" element={<Info />} />
-            <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/admin/*" element={<Suspense fallback={<Loading />}><AdminApp /></Suspense>} />
+            <Route element={<Layout />}>
+              <Route index element={<Feed />} />
+              <Route path="n/:id" element={<ItemPage />} />
+              <Route path="esami" element={<Exams />} />
+              <Route path="notifiche" element={<Notifications />} />
+              <Route path="link" element={<Links />} />
+              <Route path="info" element={<Info />} />
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </ErrorBoundary>
       </BrowserRouter>
     </ConfigProvider>
   );

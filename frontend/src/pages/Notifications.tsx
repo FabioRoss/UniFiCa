@@ -141,7 +141,9 @@ function PrefsEditor({ sub, sources, onSaved }: { sub: Subscription; sources: So
   const dirty = JSON.stringify(p) !== JSON.stringify(sub.prefs);
   const mode: Mode = p.digest ? "digest" : p.quiet ? "quiet" : "instant";
 
-  useEffect(() => setP(sub.prefs), [sub]);
+  useEffect(() => {
+    setP(sub.prefs);
+  }, [sub]);
 
   const byCat = useMemo(() => {
     const m = new Map<string, SourceInfo[]>();

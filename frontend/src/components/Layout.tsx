@@ -16,7 +16,11 @@ export function Logo({ className = "h-8 w-8" }: { className?: string }) {
 
 export default function Layout() {
   const { pathname } = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  // Braces matter: an effect's return value is its cleanup, and recent
+  // browsers make scrollTo() return a Promise, which React would then call.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   return (
     <div className="page-wash min-h-screen">

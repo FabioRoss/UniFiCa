@@ -62,7 +62,7 @@ export default function Exams() {
 
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : !list.length ? (
-        <Empty icon="calendar" title={q || filter !== "all" ? "Nessun appello trovato" : "Nessun appello in programma"}>
+        <Empty icon="calendar" title={q || filter !== "all" ? "Nessun appello trovato" : "Nessun appello rilevato"}>
           {q ? "Controlla il nome dell'insegnamento o prova con il cognome del docente." : "Appena vengono pubblicati li trovi qui."}
         </Empty>
       ) : (
