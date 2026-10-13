@@ -23,7 +23,7 @@ const NAV = [
 ];
 
 function Login({ onDone }: { onDone: () => void }) {
-  const [username, setU] = useState("admin");
+  const [username, setU] = useState("");
   const [password, setP] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -50,10 +50,10 @@ function Login({ onDone }: { onDone: () => void }) {
             <p className="text-sm muted">Pannello di amministrazione</p>
           </div>
         </div>
-        <Field label="Utente"><input className="input" value={username} onChange={(e) => setU(e.target.value)} autoComplete="username" /></Field>
-        <Field label="Password"><input className="input" type="password" value={password} onChange={(e) => setP(e.target.value)} autoComplete="current-password" autoFocus /></Field>
+        <Field label="Email o nome utente"><input className="input" value={username} onChange={(e) => setU(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} autoFocus /></Field>
+        <Field label="Password"><input className="input" type="password" value={password} onChange={(e) => setP(e.target.value)} autoComplete="current-password" /></Field>
         {err && <p className="text-sm font-medium text-red-600">{err}</p>}
-        <button className="btn-primary w-full" disabled={busy || !password}>{busy && <Spinner className="h-4 w-4 text-white" />}Accedi</button>
+        <button className="btn-primary w-full" disabled={busy || !password || !username.trim()}>{busy && <Spinner className="h-4 w-4 text-white" />}Accedi</button>
       </form>
     </div>
   );

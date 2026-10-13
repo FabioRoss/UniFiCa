@@ -4,7 +4,9 @@ cookie, in-memory throttle on failed logins.
 - Login throttle: 8 failures per IP and 40 overall per 15 minutes.
 - Sessions carry a fingerprint of the credentials, so changing the admin
   password (or user) logs out every existing session.
-- An empty or placeholder password keeps the panel locked."""
+- Login needs both an email/username and a password; an empty or guessable
+  user ("admin", "root"...) or a placeholder password keeps the panel locked.
+  The user is matched case-insensitively (emails are)."""
 from __future__ import annotations
 
 import hashlib
@@ -29,6 +31,7 @@ WINDOW_SECONDS = 900
 MAX_FAILURES_PER_IP = 8
 MAX_FAILURES_TOTAL = 40  # spread-out guessing from many IPs
 PLACEHOLDERS = {"", "change_me", "changeme", "admin", "password"}
+GUESSABLE_USERS = {"", "change_me", "changeme", "admin", "administrator", "root", "user", "test", "openunifi"}
 
 _failures: dict[str, deque[float]] = defaultdict(deque)
 _all_failures: deque[float] = deque()
@@ -54,9 +57,18 @@ def verify_password(password: str, stored: str) -> bool:
     return hmac.compare_digest(password.encode(), stored.encode())
 
 
+def normalize_user(user: str) -> str:
+    return user.strip().casefold()
+
+
 def admin_locked() -> bool:
-    """No usable password configured: nobody can log in."""
-    return settings.admin_password.strip().lower() in PLACEHOLDERS
+    """No usable credentials configured: nobody can log in."""
+    return (settings.admin_password.strip().lower() in PLACEHOLDERS
+            or normalize_user(settings.admin_user) in GUESSABLE_USERS)
+
+
+def user_matches(user: str) -> bool:
+    return hmac.compare_digest(normalize_user(user).encode(), normalize_user(settings.admin_user).encode())
 
 
 def client_ip(request: Request) -> str:
@@ -88,7 +100,7 @@ def record_failure(ip: str) -> None:
 
 
 def _fingerprint() -> str:
-    raw = f"{settings.admin_user}\x00{settings.admin_password}".encode()
+    raw = f"{normalize_user(settings.admin_user)}\x00{settings.admin_password}".encode()
     return hashlib.sha256(raw).hexdigest()[:16]
 
 
@@ -109,7 +121,7 @@ def require_admin(request: Request, db: Session = Depends(get_db)) -> str:
     if raw and not admin_locked():
         try:
             data = _serializer(db).loads(raw, max_age=SESSION_DAYS * 86400)
-            if data.get("u") == settings.admin_user and hmac.compare_digest(data.get("f", ""), _fingerprint()):
+            if hmac.compare_digest(data.get("f", ""), _fingerprint()):
                 return data["u"]
         except BadSignature:
             pass

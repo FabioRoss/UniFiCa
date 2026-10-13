@@ -17,9 +17,10 @@ class Settings(BaseSettings):
     data_dir: str = "/data"
     frontend_dist: str = str(Path(__file__).resolve().parents[2] / "frontend" / "dist")
 
-    # Admin login. The password may be plaintext or a hash made with
-    # `python -m app.cli hash-password` (format pbkdf2_sha256:...).
-    admin_user: str = "admin"
+    # Admin login: an email or a username of your choice (not "admin") plus a
+    # password, plaintext or a hash from `python -m app.cli hash-password`
+    # (format pbkdf2_sha256:...). Both empty = admin panel locked.
+    admin_user: str = ""
     admin_password: str = ""
 
     # Signs admin session cookies. Generated and stored in data_dir when empty.

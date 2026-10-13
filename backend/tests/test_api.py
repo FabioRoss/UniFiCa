@@ -11,6 +11,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "data_dir", str(tmp_path))
     monkeypatch.setattr(settings, "scheduler_enabled", False)
     monkeypatch.setattr(settings, "telegram_bot_token", "")
+    monkeypatch.setattr(settings, "admin_user", "Fabio.Test@Example.com")
     monkeypatch.setattr(settings, "admin_password", "segreta")
     monkeypatch.setattr(settings, "frontend_dist", str(tmp_path / "dist"))
     from app import security
@@ -80,9 +81,9 @@ def test_push_subscription_lifecycle(client):
 
 def test_admin(client):
     assert client.get("/api/admin/stats").status_code == 401
-    assert client.post("/api/admin/login", json={"username": "admin", "password": "no"}, headers=H).status_code == 401
-    assert client.post("/api/admin/login", json={"username": "admin", "password": "segreta"}).status_code == 403
-    assert client.post("/api/admin/login", json={"username": "admin", "password": "segreta"}, headers=H).status_code == 200
+    assert client.post("/api/admin/login", json={"username": "fabio.test@example.com", "password": "no"}, headers=H).status_code == 401
+    assert client.post("/api/admin/login", json={"username": "fabio.test@example.com", "password": "segreta"}).status_code == 403
+    assert client.post("/api/admin/login", json={"username": "fabio.test@example.com", "password": "segreta"}, headers=H).status_code == 200
 
     stats = client.get("/api/admin/stats").json()
     assert stats["subscribers"]["total"] == 0 and len(stats["sources"]) >= 2
@@ -113,11 +114,11 @@ def test_password_hash():
     assert "$" not in h and verify_password("abc", h) and not verify_password("abd", h)
 
 
-def _login(client, password="segreta", xff=None):
+def _login(client, password="segreta", xff=None, user="fabio.test@example.com"):
     headers = dict(H)
     if xff:
         headers["X-Forwarded-For"] = xff
-    return client.post("/api/admin/login", json={"username": "admin", "password": password}, headers=headers)
+    return client.post("/api/admin/login", json={"username": user, "password": password}, headers=headers)
 
 
 def test_every_admin_route_requires_login(client):
@@ -165,3 +166,21 @@ def test_placeholder_password_keeps_panel_locked(client, monkeypatch):
 def test_forged_cookie_rejected(client):
     client.cookies.set("openunifi_admin", "eyJ1IjoiYWRtaW4ifQ.forged.signature", path="/api")
     assert client.get("/api/admin/stats").status_code == 401
+
+
+def test_login_needs_the_right_user_too(client):
+    r = _login(client, user="admin")  # right password, wrong user
+    assert r.status_code == 401 and r.json()["detail"] == "Credenziali non valide"
+    assert _login(client, user="  FABIO.TEST@example.COM ").status_code == 200  # emails are case-insensitive
+
+
+def test_guessable_user_keeps_panel_locked(client, monkeypatch):
+    for user in ("", "admin", "Root"):
+        monkeypatch.setattr(settings, "admin_user", user)
+        assert _login(client, user=user).status_code == 503
+
+
+def test_user_change_logs_out_sessions(client, monkeypatch):
+    assert _login(client).status_code == 200
+    monkeypatch.setattr(settings, "admin_user", "altra@example.com")
+    assert client.get("/api/admin/me").status_code == 401

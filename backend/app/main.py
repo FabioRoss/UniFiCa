@@ -35,7 +35,8 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
     if admin_locked():
-        log.warning("OPENUNIFI_ADMIN_PASSWORD is empty or a placeholder: the admin panel is locked")
+        log.warning("Admin panel locked: set OPENUNIFI_ADMIN_USER (an email or username, not 'admin') "
+                    "and OPENUNIFI_ADMIN_PASSWORD")
     elif not settings.admin_password.startswith("pbkdf2_sha256:") and len(settings.admin_password) < 12:
         log.warning("The admin password is short: use 12+ characters (python -m app.cli hash-password)")
 

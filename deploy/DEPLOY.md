@@ -50,7 +50,7 @@ cp .env.example .env
 
 # admin password hash (no `$` in it, paste it as is)
 docker compose run --rm --no-deps openunifi-app python -m app.cli hash-password
-nano .env        # OPENUNIFI_PUBLIC_URL, OPENUNIFI_ADMIN_PASSWORD, OPENUNIFI_VAPID_CONTACT, Telegram (optional)
+nano .env        # OPENUNIFI_PUBLIC_URL, OPENUNIFI_ADMIN_USER, OPENUNIFI_ADMIN_PASSWORD, OPENUNIFI_VAPID_CONTACT, Telegram (optional)
 
 docker compose up -d --build
 docker compose logs -f openunifi-app     # first checks start within 30 s
@@ -77,8 +77,9 @@ Open `https://<your domain>` and `https://<your domain>/admin`.
 
 ### Admin panel security
 
-`/admin` asks for the user and password from `.env`; every `/api/admin` call
-is refused without a valid session. In detail:
+`/admin` asks for **both** an email/username and a password, the
+`OPENUNIFI_ADMIN_USER` and `OPENUNIFI_ADMIN_PASSWORD` from `.env`; every
+`/api/admin` call is refused without a valid session. In detail:
 
 - Session: signed, `HttpOnly`, `Secure`, `SameSite=Strict` cookie, valid 30 days.
   Changing `OPENUNIFI_ADMIN_PASSWORD` (or the user) logs out every session.
@@ -86,7 +87,9 @@ is refused without a valid session. In detail:
   the login for a while. The IP is the one Caddy saw, so faking
   `X-Forwarded-For` does not help.
 - Writes also need a custom header only the app sends (CSRF protection).
-- With an empty or placeholder password (`CHANGE_ME`) nobody can log in.
+- With an empty or placeholder password (`CHANGE_ME`), or an empty or
+  guessable user (`admin`, `root`...), nobody can log in. The user is not
+  case-sensitive (handy for emails). A wrong login never says which of the two was wrong.
 - The admin pages are marked `noindex` for search engines.
 
 ## 4. Telegram bot (optional, free)

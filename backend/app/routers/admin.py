@@ -26,7 +26,7 @@ from ..scraper import engine
 from ..scraper.parsers import PARSERS, PRESETS
 from ..security import (
     COOKIE, SESSION_DAYS, admin_locked, client_ip, make_session, record_failure, require_admin, throttled,
-    verify_password,
+    user_matches, verify_password,
 )
 from .public import att_out, iso, link_out
 
@@ -37,7 +37,7 @@ auth = [Depends(require_admin)]
 # ── Session ──────────────────────────────────────────────────────────────
 
 class LoginIn(BaseModel):
-    username: str = Field(max_length=100)
+    username: str = Field(max_length=200)
     password: str = Field(max_length=200)
 
 
@@ -46,12 +46,13 @@ def login(body: LoginIn, request: Request, response: Response, db: Session = Dep
     if request.headers.get("x-openunifi") != "1":
         raise HTTPException(403, "Richiesta non valida")
     if admin_locked():
-        raise HTTPException(503, "Pannello bloccato: imposta OPENUNIFI_ADMIN_PASSWORD nel file .env")
+        raise HTTPException(503, "Pannello bloccato: imposta OPENUNIFI_ADMIN_USER (non 'admin') e "
+                                 "OPENUNIFI_ADMIN_PASSWORD nel file .env")
     ip = client_ip(request)
     if throttled(ip):
         raise HTTPException(429, "Troppi tentativi, riprova tra qualche minuto")
     # Evaluate both, so response time does not reveal whether the user exists
-    user_ok = secrets.compare_digest(body.username.encode(), settings.admin_user.encode())
+    user_ok = user_matches(body.username)
     pass_ok = verify_password(body.password, settings.admin_password)
     ok = user_ok and pass_ok
     if not ok:
