@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { ItemDetail, VersionDiff } from "../api";
 import DiffView from "../components/DiffView";
 import { Icon } from "../components/Icon";
@@ -39,7 +39,12 @@ function Content({ text }: { text: string }) {
 
 export default function ItemPage() {
   const { id } = useParams();
-  const [params, setParams] = useSearchParams();
+  const [params, setSearchParams] = useSearchParams();
+  const loc = useLocation();
+  const navigate = useNavigate();
+  // Pages that link here pass { backLabel }; keep it when ?v= changes
+  const backLabel = (loc.state as { backLabel?: string } | null)?.backLabel;
+  const setParams = (p: Record<string, string>) => setSearchParams(p, { replace: true, state: loc.state });
   const { data: item, error, loading, reload } = useFetch<ItemDetail>(`/api/items/${id}`);
   const latest = item?.versions[0]?.number ?? 1;
   const selected = Number(params.get("v")) || null;
@@ -64,12 +69,16 @@ export default function ItemPage() {
   };
 
   const modifiedCount = item.versions.filter((v) => v.kind === "modified").length;
+  const isExam = item.source.kind === "exams";
+  // Came from a page of the app: go back to it (keeps its search and filters).
+  // Opened directly (notification, shared link): go to the item's natural list.
+  const goBack = () => (backLabel ? navigate(-1) : navigate(isExam ? "/esami" : "/"));
 
   return (
     <article className="mx-auto max-w-3xl">
-      <Link to="/" className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 dark:text-brand-300">
-        <Icon name="chevronLeft" className="h-4 w-4" /> Novità
-      </Link>
+      <button onClick={goBack} className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 dark:text-brand-300">
+        <Icon name="chevronLeft" className="h-4 w-4" /> {backLabel ?? (isExam ? "Appelli" : "Novità")}
+      </button>
 
       <div className="card p-5 sm:p-7">
         <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-medium muted">
@@ -95,7 +104,7 @@ export default function ItemPage() {
           <section className="mt-7 rounded-2xl border border-amber-200 bg-amber-50/40 p-4 sm:p-5 dark:border-amber-900/60 dark:bg-amber-950/10">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-bold">Cosa è cambiato <span className="font-normal muted">(versione {showDiffFor})</span></h2>
-              <button className="text-sm font-semibold text-brand-700 dark:text-brand-300" onClick={() => setParams({}, { replace: true })}>Chiudi</button>
+              <button className="text-sm font-semibold text-brand-700 dark:text-brand-300" onClick={() => setParams({})}>Chiudi</button>
             </div>
             {diffLoading || !diff ? <Loading label="Calcolo delle differenze..." /> : <DiffView diff={diff} />}
           </section>
@@ -161,7 +170,7 @@ export default function ItemPage() {
                 </div>
                 {v.number > 1 && (
                   <button className={`mt-1 text-[13px] font-semibold ${active && showDiffFor ? "text-slate-400" : "text-brand-700 dark:text-brand-300"}`}
-                    onClick={() => { setParams({ v: String(v.number) }, { replace: true }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                    onClick={() => { setParams({ v: String(v.number) }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                     Vedi le differenze
                   </button>
                 )}

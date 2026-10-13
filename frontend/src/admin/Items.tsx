@@ -26,7 +26,7 @@ export default function Items() {
           {data?.map((i) => (
             <div key={i.id} className={`flex items-center gap-3 p-3 ${i.hidden ? "opacity-50" : ""}`}>
               <div className="min-w-0 flex-1">
-                <Link to={`/n/${i.id}`} className="block truncate text-sm font-medium hover:text-brand-700">{i.title}</Link>
+                <Link to={`/n/${i.id}`} state={{ backLabel: "Contenuti" }} className="block truncate text-sm font-medium hover:text-brand-700">{i.title}</Link>
                 <p className="text-xs muted">{i.source} · {i.versions} versioni · {relTime(i.changed_at)}</p>
               </div>
               {i.hidden && <Badge tone="slate">nascosto</Badge>}

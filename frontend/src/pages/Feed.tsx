@@ -24,7 +24,7 @@ export function FeedCard({ e, query = "" }: { e: FeedEntry; query?: string }) {
   const modified = e.kind === "modified";
   const kindIcon = e.item.source.kind === "exams" ? "calendar" : e.item.source.kind === "page" ? "file" : "news";
   return (
-    <Link to={`/n/${e.item.id}?v=${e.number}`}
+    <Link to={`/n/${e.item.id}?v=${e.number}`} state={{ backLabel: "Novità" }}
       className="card group block p-4 transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lg dark:hover:border-brand-800">
       <div className="mb-2 flex items-center gap-2">
         {!e.baseline && (modified ? <Badge tone="amber"><Icon name="pencil" className="h-3 w-3" strokeWidth={2.4} />Modificato</Badge>

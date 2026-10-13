@@ -91,7 +91,7 @@ export default function Exams() {
                   const d = fmtDay(e.date);
                   const reg = regState(e);
                   return (
-                    <Link key={e.id} to={`/n/${e.id}`} className="card flex gap-4 p-4 transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lg dark:hover:border-brand-800">
+                    <Link key={e.id} to={`/n/${e.id}`} state={{ backLabel: "Appelli" }} className="card flex gap-4 p-4 transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lg dark:hover:border-brand-800">
                       <div className="flex w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-b from-brand-50 to-brand-100/60 py-2 text-brand-800 dark:from-brand-900/50 dark:to-brand-900/20 dark:text-brand-100">
                         <span className="text-[11px] font-semibold uppercase">{d.weekday}</span>
                         <span className="text-2xl font-extrabold leading-none">{d.day}</span>
