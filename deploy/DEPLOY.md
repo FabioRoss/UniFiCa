@@ -164,10 +164,12 @@ git pull && docker compose up -d --build
 ./deploy/esse3-sync.sh          # first import: stored as baseline, nobody notified
 sudo apt install -y cron && sudo systemctl enable --now cron   # minimal Debian images lack it
 crontab -e                      # then add this line (hourly; does nothing without a new snapshot):
-#   23 * * * * cd /home/debian/openunifi && ./deploy/esse3-sync.sh >> backups/esse3-sync.log 2>&1
+#   23 * * * * cd /home/debian/openunifi && ./deploy/esse3-sync.sh >> /home/debian/esse3-sync.log 2>&1
 ```
 
-The cron user must be able to run `docker` without sudo (`sudo usermod -aG
+Keep the log outside `backups/`: Docker creates that folder as root, so the
+cron user cannot write there and the job fails silently. The cron user must
+be able to run `docker` without sudo (`sudo usermod -aG
 docker debian`, then log in again) and `git fetch` without a password (the same
 deploy key or token used for `git pull`).
 
