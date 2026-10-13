@@ -102,6 +102,18 @@ def test_daily_sync_notifies_changes_and_skips_old(tmp_path, monkeypatch):
     res = exam_snapshot.import_(db, nxt, sync=True)
     assert (res["added"], res["changed"], len(res["version_ids"])) == (1, 1, 2)  # both will be notified
 
+    # Switched off: the daily feed is ignored; back on, it catches up
+    src.enabled = False
+    db.commit()
+    later = copy.deepcopy(nxt)
+    later["fetched_at"] = "2026-10-15T05:00:00Z"
+    later["sessions"][2]["content_text"] += " (aula cambiata)"
+    assert exam_snapshot.import_(db, later, sync=True)["skipped"] == "disabled"
+    src.enabled = True
+    db.commit()
+    res = exam_snapshot.import_(db, later, sync=True)
+    assert not res["skipped"] and res["changed"] == 1
+
     exam_snapshot.set_direct(db, "medicina-appelli")
     db.refresh(src)
     assert "snapshot_only" not in src.config

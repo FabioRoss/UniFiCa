@@ -94,6 +94,11 @@ def import_(db: Session, data: dict[str, Any], slug: str | None = None,
         raise SystemExit(f"Fonte appelli '{slug}' inesistente su questo server")
     result: dict[str, Any] = {"sessions": len(data["sessions"]), "added": 0, "changed": 0,
                               "skipped": False, "version_ids": []}
+    if sync and not src.enabled:
+        # Switched off in the admin panel: the feed keeps arriving, nothing is
+        # stored or notified. Once back on, the next sync catches up.
+        result["skipped"] = "disabled"
+        return result
     stored = snapshot_at(db, src.id)
     if sync and stored and _parse_utc(data["fetched_at"]) <= _parse_utc(stored):
         result["skipped"] = True  # already have this snapshot (or a newer one)

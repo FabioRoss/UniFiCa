@@ -180,6 +180,14 @@ the repo's Actions tab, pick `esse3-snapshot`, "Run workflow". If ESSE3 ever
 works from the server again: `docker compose exec openunifi-app python -m
 app.cli exams-direct` and remove the cron line.
 
+Switching the source off in the admin panel pauses it everywhere: the
+Action and the cron job keep running, but the import ignores the snapshot
+(log: "Fonte disattivata"), so nothing is stored or notified and the
+Appelli page is hidden. Switch it back on and the next hourly sync catches
+up with the latest snapshot, notifying what changed in the meantime. To stop
+the GitHub side too, disable the workflow in the Actions tab ("..." →
+"Disable workflow").
+
 A one-off file can still be loaded by hand (never notifies):
 `python -m app.cli import-exams FILE` (inside the container), and made where
 ESSE3 is reachable with `python -m app.cli fetch-exams FILE`.

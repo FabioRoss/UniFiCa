@@ -83,6 +83,9 @@ def main() -> None:
             with open(args.file, encoding="utf-8") as f:
                 data = json.load(f)
             res = exam_snapshot.import_(db, data, args.source, sync=args.sync)
+            if res["skipped"] == "disabled":
+                print("Fonte disattivata nel pannello admin: snapshot ignorato.")
+                return
             if res["skipped"]:
                 print(f"Snapshot del {data['fetched_at']} già importato: niente da fare.")
                 return
