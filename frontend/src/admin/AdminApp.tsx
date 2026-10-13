@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { api, ApiError } from "../api";
 import { Icon } from "../components/Icon";
-import { Logo } from "../components/Layout";
+import { Logo, ThemeToggle } from "../components/Layout";
 import { Field, Loading, Spinner } from "../components/ui";
 import Dashboard from "./Dashboard";
 import Sources from "./Sources";
@@ -82,6 +82,7 @@ export default function AdminApp() {
           <NavLink to="/" className="flex items-center gap-2"><Logo /><span className="font-extrabold">Admin</span></NavLink>
           <div className="flex-1" />
           <a href="/" className="btn-ghost hidden sm:inline-flex">Vai al sito</a>
+          <ThemeToggle />
           <button className="btn-ghost" onClick={logout}><Icon name="logout" className="h-4 w-4" />Esci</button>
         </div>
         <nav className="no-scrollbar mx-auto flex max-w-6xl gap-1 overflow-x-auto px-3 pb-2" aria-label="Sezioni admin">

@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { setTheme, useTheme } from "../lib/theme";
 import { Icon } from "./Icon";
 
 const NAV = [
@@ -33,17 +34,20 @@ export default function Layout() {
               <span className="text-slate-900 dark:text-white">Open </span><span className="brand-text">Unifi</span>
             </span>
           </NavLink>
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Principale">
-            {NAV.map((n) => (
-              <NavLink key={n.to} to={n.to} end={n.end}
-                className={({ isActive }) =>
-                  `rounded-xl px-3 py-2 text-sm font-semibold transition ${isActive
-                    ? "bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200"
-                    : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"}`}>
-                {n.label}
-              </NavLink>
-            ))}
-          </nav>
+          <div className="flex items-center gap-1">
+            <nav className="hidden items-center gap-1 md:flex" aria-label="Principale">
+              {NAV.map((n) => (
+                <NavLink key={n.to} to={n.to} end={n.end}
+                  className={({ isActive }) =>
+                    `rounded-xl px-3 py-2 text-sm font-semibold transition ${isActive
+                      ? "bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200"
+                      : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"}`}>
+                  {n.label}
+                </NavLink>
+              ))}
+            </nav>
+            <ThemeToggle className="md:ml-1" />
+          </div>
         </div>
       </header>
 
@@ -72,5 +76,17 @@ export default function Layout() {
         </div>
       </nav>
     </div>
+  );
+}
+
+export function ThemeToggle({ className = "" }: { className?: string }) {
+  const theme = useTheme();
+  const dark = theme === "dark";
+  const label = dark ? "Passa alla modalità giorno" : "Passa alla modalità notte";
+  return (
+    <button type="button" onClick={() => setTheme(dark ? "light" : "dark")} aria-label={label} title={label}
+      className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-slate-600 transition hover:bg-slate-100 active:scale-95 dark:text-slate-300 dark:hover:bg-slate-800 ${className}`}>
+      <Icon name={dark ? "sun" : "moon"} className="h-5 w-5" />
+    </button>
   );
 }

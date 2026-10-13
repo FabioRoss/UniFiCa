@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Night mode: <html data-theme="dark">, set before paint by index.html (system
+   setting by default) and switched by the header button (lib/theme.ts) */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --color-brand-50: #eff6ff;
@@ -16,15 +20,14 @@
 }
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --chart-bar: #2563eb;
   --surface: #ffffff;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --chart-bar: #3b82f6;
-    --surface: #111a2e;
-  }
+:root[data-theme=dark] {
+  color-scheme: dark;
+  --chart-bar: #3b82f6;
+  --surface: #111a2e;
 }
 
 html, body, #root { min-height: 100%; }
@@ -35,9 +38,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
-@media (prefers-color-scheme: dark) {
-  body { background: #0b1220; color: #e2e8f0; }
-}
+[data-theme=dark] body { background: #0b1220; color: #e2e8f0; }
 
 /* Soft blue wash behind the top of every page */
 .page-wash {
@@ -45,12 +46,10 @@ body {
     radial-gradient(1200px 420px at 10% -10%, rgba(37, 99, 235, 0.16), transparent 60%),
     radial-gradient(900px 380px at 100% 0%, rgba(56, 189, 248, 0.16), transparent 60%);
 }
-@media (prefers-color-scheme: dark) {
-  .page-wash {
-    background:
-      radial-gradient(1200px 420px at 10% -10%, rgba(37, 99, 235, 0.22), transparent 60%),
-      radial-gradient(900px 380px at 100% 0%, rgba(56, 189, 248, 0.12), transparent 60%);
-  }
+[data-theme=dark] .page-wash {
+  background:
+    radial-gradient(1200px 420px at 10% -10%, rgba(37, 99, 235, 0.22), transparent 60%),
+    radial-gradient(900px 380px at 100% 0%, rgba(56, 189, 248, 0.12), transparent 60%);
 }
 
 @utility brand-gradient {
@@ -65,14 +64,14 @@ body {
 
 @utility card {
   @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(37,99,235,0.18)];
-  @media (prefers-color-scheme: dark) {
+  @variant dark {
     @apply border-slate-800 bg-[#111a2e] shadow-none;
   }
 }
 
 @utility input {
   @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[15px] outline-none transition placeholder:text-slate-400 focus:border-brand-400 focus:ring-4 focus:ring-brand-100;
-  @media (prefers-color-scheme: dark) {
+  @variant dark {
     @apply border-slate-700 bg-slate-900 text-slate-100 focus:ring-brand-900;
   }
 }
@@ -85,39 +84,39 @@ body {
 }
 @utility btn-soft {
   @apply btn bg-brand-50 text-brand-700 hover:bg-brand-100;
-  @media (prefers-color-scheme: dark) {
+  @variant dark {
     @apply bg-brand-900/40 text-brand-200 hover:bg-brand-900/60;
   }
 }
 @utility btn-ghost {
   @apply btn text-slate-600 hover:bg-slate-100;
-  @media (prefers-color-scheme: dark) {
+  @variant dark {
     @apply text-slate-300 hover:bg-slate-800;
   }
 }
 @utility btn-danger {
   @apply btn bg-red-50 text-red-700 hover:bg-red-100;
-  @media (prefers-color-scheme: dark) {
+  @variant dark {
     @apply bg-red-950/50 text-red-300 hover:bg-red-950;
   }
 }
 
 @utility chip {
   @apply inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-medium text-slate-600 transition hover:border-brand-300;
-  @media (prefers-color-scheme: dark) {
+  @variant dark {
     @apply border-slate-700 bg-slate-900 text-slate-300;
   }
 }
 @utility chip-on {
   @apply border-brand-600 bg-brand-600 text-white hover:border-brand-600;
-  @media (prefers-color-scheme: dark) {
+  @variant dark {
     @apply border-brand-500 bg-brand-600 text-white;
   }
 }
 
 @utility muted {
   @apply text-slate-500;
-  @media (prefers-color-scheme: dark) {
+  @variant dark {
     @apply text-slate-400;
   }
 }
@@ -127,7 +126,7 @@ body {
 .no-scrollbar { scrollbar-width: none; }
 
 mark { background: #fde68a; color: inherit; border-radius: 3px; padding: 0 1px; }
-@media (prefers-color-scheme: dark) { mark { background: #854d0e; } }
+[data-theme=dark] mark { background: #854d0e; }
 
 /* Page content rendered from the official site (backend richtext.py) */
 .rich { font-size: 15px; line-height: 1.65; color: #1e293b; overflow-wrap: anywhere; }
@@ -163,14 +162,12 @@ mark { background: #fde68a; color: inherit; border-radius: 3px; padding: 0 1px; 
 .rich th + th, .rich td + td, .rich th + td, .rich td + th { border-left: 1px solid #f1f5f9; }
 .rich tbody tr:nth-child(even) > td { background: #fbfcfe; }
 
-@media (prefers-color-scheme: dark) {
-  .rich { color: #e2e8f0; }
-  .rich h2, .rich h3, .rich h4, .rich th { color: #f1f5f9; }
-  .rich blockquote { border-color: #1e3a8a; color: #94a3b8; }
-  .rich hr, .rich .table-wrap, .rich th, .rich td { border-color: #1e293b; }
-  .rich th + th, .rich td + td, .rich th + td, .rich td + th { border-left-color: #1e293b; }
-  .rich th { background: #0f172a; }
-  .rich tbody tr:nth-child(even) > td { background: #0e1628; }
-  .rich a { color: #93c5fd; text-decoration-color: #1e40af; }
-  .rich a[data-file]::after { background: rgba(30, 58, 138, 0.4); color: #bfdbfe; box-shadow: inset 0 0 0 1px #1e40af; }
-}
+[data-theme=dark] .rich { color: #e2e8f0; }
+[data-theme=dark] .rich h2, [data-theme=dark] .rich h3, [data-theme=dark] .rich h4, [data-theme=dark] .rich th { color: #f1f5f9; }
+[data-theme=dark] .rich blockquote { border-color: #1e3a8a; color: #94a3b8; }
+[data-theme=dark] .rich hr, [data-theme=dark] .rich .table-wrap, [data-theme=dark] .rich th, [data-theme=dark] .rich td { border-color: #1e293b; }
+[data-theme=dark] .rich th + th, [data-theme=dark] .rich td + td, [data-theme=dark] .rich th + td, [data-theme=dark] .rich td + th { border-left-color: #1e293b; }
+[data-theme=dark] .rich th { background: #0f172a; }
+[data-theme=dark] .rich tbody tr:nth-child(even) > td { background: #0e1628; }
+[data-theme=dark] .rich a { color: #93c5fd; text-decoration-color: #1e40af; }
+[data-theme=dark] .rich a[data-file]::after { background: rgba(30, 58, 138, 0.4); color: #bfdbfe; box-shadow: inset 0 0 0 1px #1e40af; }
