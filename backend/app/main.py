@@ -98,6 +98,9 @@ def spa(path: str) -> Response:
         if path == "sw.js":
             return FileResponse(target, media_type="text/javascript",
                                 headers={**NO_CACHE, "Service-Worker-Allowed": "/"})
+        if path == "version.json":
+            # Installed apps poll this to notice a new build: never cache it
+            return FileResponse(target, media_type="application/json", headers={"Cache-Control": "no-store"})
         if path.endswith(".webmanifest"):
             return FileResponse(target, media_type="application/manifest+json", headers=NO_CACHE)
         return FileResponse(target, headers={"Cache-Control": "public, max-age=3600"})

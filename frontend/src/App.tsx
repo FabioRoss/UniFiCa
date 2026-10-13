@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import ErrorBoundary from "./components/ErrorBoundary";
+import UpdateBar from "./components/UpdateBar";
 import Layout from "./components/Layout";
 import { Loading } from "./components/ui";
 import { ConfigProvider } from "./lib/app";
@@ -33,6 +34,7 @@ export default function App() {
             </Route>
           </Routes>
         </ErrorBoundary>
+        <UpdateBar />
       </BrowserRouter>
     </ConfigProvider>
   );
