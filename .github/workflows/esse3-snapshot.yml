@@ -11,6 +11,8 @@ on:
   schedule:
     - cron: "41 4 * * *"      # daily, 04:41 UTC (06:41 in Italy in summer, 05:41 in winter)
   workflow_dispatch: {}        # "Run workflow" button for an immediate refresh
+  push:                        # and whenever this workflow itself changes
+    paths: [.github/workflows/esse3-snapshot.yml]
 
 permissions:
   contents: write
