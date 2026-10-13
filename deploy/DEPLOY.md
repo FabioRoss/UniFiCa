@@ -15,8 +15,22 @@ certificates; Open Unifi publishes no ports and is reached by container name
 
 ## 1. DNS
 
-Point an `A` record for the domain you picked (e.g. `openunifi.it` and
-`www.openunifi.it`) at the server's IP.
+At the registrar (register.it for `openunifi.it`), with `SERVER_IP` being the
+same IP the WeRace and Halo domains already point to:
+
+| Name | Type | Value | Action |
+|---|---|---|---|
+| `openunifi.it` | A | `SERVER_IP` | **change** the existing one (it points to register.it's hosting) |
+| `www.openunifi.it` | CNAME | `openunifi.it.` | **add** (redirected to the bare domain by Caddy) |
+| `ftp.openunifi.it` | CNAME | `openunifi.it.` | delete, unless you use register.it's FTP |
+| MX, TXT (SPF), `_autodiscover` SRV, `autoconfig`, `authsmtp` | | | **leave as they are**: they run the register.it mailbox |
+
+Only add an `AAAA` record if the server has a working IPv6 address (and ports
+80/443 open on it): a wrong `AAAA` makes Let's Encrypt fail. If you ever add a
+`CAA` record, it must allow `letsencrypt.org`.
+
+Check it has propagated (TTL is 15 minutes) before starting Caddy:
+`dig +short openunifi.it` and `dig +short www.openunifi.it` must print the server IP.
 
 ## 2. Add the site to the edge proxy
 
@@ -26,7 +40,7 @@ The Halo repo (`deploy/edge`) already contains the Open Unifi block. On the serv
 cd /srv/edge
 # pull the updated Caddyfile + docker-compose.yml from the Halo repo, or copy them over
 nano .env
-#   OPENUNIFI_DOMAIN=openunifi.it, www.openunifi.it
+#   OPENUNIFI_DOMAIN=openunifi.it          (bare domain only; www redirects to it)
 ```
 
 For reference, the block in `/srv/edge/Caddyfile` is:
@@ -36,7 +50,13 @@ For reference, the block in `/srv/edge/Caddyfile` is:
 	encode zstd gzip
 	reverse_proxy openunifi-app:8000
 }
+www.{$OPENUNIFI_DOMAIN} {
+	redir https://{$OPENUNIFI_DOMAIN}{uri} permanent
+}
 ```
+
+One origin only, on purpose: push subscriptions, the admin login and the
+installed PWA all belong to the exact host they were created on.
 
 Don't reload the proxy yet; start the app first (step 3), so Caddy finds it.
 
