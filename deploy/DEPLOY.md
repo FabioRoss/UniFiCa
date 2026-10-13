@@ -162,6 +162,7 @@ publishes it on the `esse3-data` branch; the server imports it.
 ```bash
 git pull && docker compose up -d --build
 ./deploy/esse3-sync.sh          # first import: stored as baseline, nobody notified
+sudo apt install -y cron && sudo systemctl enable --now cron   # minimal Debian images lack it
 crontab -e                      # then add this line (hourly; does nothing without a new snapshot):
 #   23 * * * * cd /home/debian/openunifi && ./deploy/esse3-sync.sh >> backups/esse3-sync.log 2>&1
 ```
