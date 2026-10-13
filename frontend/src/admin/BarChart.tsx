@@ -58,10 +58,13 @@ export default function BarChart({ data, label }: { data: { date: string; count:
           <span className="font-semibold">{data[hover].count}</span> · {fmt(data[hover].date)}
         </div>
       )}
-      <table className="sr-only">
-        <caption>{label}</caption>
-        <tbody>{data.map((d) => <tr key={d.date}><th>{d.date}</th><td>{d.count}</td></tr>)}</tbody>
-      </table>
+      {/* Tables ignore width:1px, so the hidden wrapper does the hiding */}
+      <div className="sr-only">
+        <table>
+          <caption>{label}</caption>
+          <tbody>{data.map((d) => <tr key={d.date}><th>{d.date}</th><td>{d.count}</td></tr>)}</tbody>
+        </table>
+      </div>
     </div>
   );
 }

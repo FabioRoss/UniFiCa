@@ -61,7 +61,7 @@ function LinkForm({ draft, groups, onDone }: { draft: LinkDraft; groups: LinkGro
       {input("url", contact ? "Link (facoltativo)" : "Link", "https://...")}
       {input("description", "Descrizione (facoltativa)")}
       {contact && (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {input("email", "Email")}
           {input("phone", "Telefono")}
           {input("location", "Indirizzo / luogo")}

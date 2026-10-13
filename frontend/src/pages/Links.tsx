@@ -82,17 +82,17 @@ export default function Links() {
     <div>
       <PageTitle title="Link utili e contatti" subtitle="Uffici, portali e servizi: tutto quello che serve, senza perdersi tra i siti." />
       <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 -mx-4 mb-4 space-y-3 bg-[#f5f8ff]/90 px-4 pb-3 pt-1 backdrop-blur-xl dark:bg-[#0b1220]/90">
-        <SearchBox value={q} onChange={setQ} placeholder="Cerca: segreteria, mensa, tirocini, email..." />
-        {!q && data && data.length > 1 && (
-          <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
-            {data.map((g) => (
-              <a key={g.id} href={`#g${g.id}`} className="chip shrink-0">{g.name}</a>
-            ))}
-          </div>
-        )}
+        <SearchBox value={q} onChange={setQ} placeholder="Cerca: segreteria, mensa..." />
         {q && <p className="px-1 text-xs muted">{total} risultat{total === 1 ? "o" : "i"}</p>}
       </div>
 
+      {!q && data && data.length > 1 && (
+        <div className="mb-5 flex flex-wrap gap-2">
+          {data.map((g) => (
+            <a key={g.id} href={`#g${g.id}`} className="chip shrink-0">{g.name}</a>
+          ))}
+        </div>
+      )}
       {error && <ErrorBox message={error} onRetry={reload} />}
       {loading ? <Loading /> : !groups.length ? (
         <Empty title={q ? "Nessun risultato" : "Ancora nessun link"}>{q ? "Prova con un'altra parola." : "Torna presto."}</Empty>
@@ -102,7 +102,7 @@ export default function Links() {
             <section key={g.id} id={`g${g.id}`} className="scroll-mt-40">
               <h2 className="text-lg font-bold">{g.name}</h2>
               {g.description && <p className="mb-3 text-sm muted">{g.description}</p>}
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
                 {g.links.map((l) => <LinkCard key={l.id} l={l} q={q} />)}
               </div>
             </section>

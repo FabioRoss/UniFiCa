@@ -161,7 +161,7 @@ function SourceForm({ initial, presets, onClose, onSaved }: {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {KINDS.map((k) => (
           <button key={k.value} onClick={() => setKind(k.value)}
             className={`rounded-xl border p-3 text-left transition ${d.kind === k.value ? "border-brand-500 bg-brand-50 ring-2 ring-brand-200 dark:bg-brand-900/30 dark:ring-brand-800" : "border-slate-200 hover:border-brand-300 dark:border-slate-700"}`}>
@@ -170,7 +170,7 @@ function SourceForm({ initial, presets, onClose, onSaved }: {
           </button>
         ))}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Nome"><input className="input" value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} placeholder="es. News Medicina e Chirurgia" /></Field>
         <Field label="Gruppo" hint="Raggruppa le fonti nelle preferenze degli utenti"><input className="input" value={d.category} onChange={(e) => setD({ ...d, category: e.target.value })} placeholder="es. Medicina e Chirurgia" /></Field>
       </div>
@@ -181,8 +181,8 @@ function SourceForm({ initial, presets, onClose, onSaved }: {
         <>
           <Field label="Tipo di sito">
             <select className="input" value={d.parser} onChange={(e) => setD({ ...d, parser: e.target.value })}>
-              <option value="unifi_news">Sito di corso UniFI (modulo News standard)</option>
-              <option value="css_list">Altro sito (selettori CSS personalizzati)</option>
+              <option value="unifi_news">Sito di un corso UniFI</option>
+              <option value="css_list">Altro sito (selettori CSS)</option>
             </select>
           </Field>
           <Field label="URL archivio (facoltativo)" hint="Letto una sola volta al primo controllo, per importare le notizie passate.">
@@ -192,7 +192,7 @@ function SourceForm({ initial, presets, onClose, onSaved }: {
       )}
       {d.kind === "exams" && <Esse3Picker config={d.config} onChange={(config) => setD({ ...d, config })} />}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Frequenza di controllo">
           <select className="input" value={d.interval_minutes} onChange={(e) => setD({ ...d, interval_minutes: Number(e.target.value) })}>
             {INTERVALS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}

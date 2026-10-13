@@ -184,12 +184,11 @@ export default function Feed() {
       <Announcements />
 
       <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 -mx-4 mb-4 space-y-3 bg-[#f5f8ff]/90 px-4 pb-3 pt-1 backdrop-blur-xl dark:bg-[#0b1220]/90">
-        <SearchBox value={q} onChange={setQ} placeholder="Cerca negli avvisi, anche nel testo..." />
-        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+        <SearchBox value={q} onChange={setQ} placeholder="Cerca negli avvisi..." />
+        <div className="flex flex-wrap gap-2">
           {([["", "Tutto"], ["new", "Nuovi"], ["modified", "Modificati"]] as [Kind, string][]).map(([k, l]) => (
             <button key={k} className={`chip shrink-0 ${kind === k ? "chip-on" : ""}`} onClick={() => set("tipo", k)}>{l}</button>
           ))}
-          <span className="mx-1 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
           <select className={`chip shrink-0 cursor-pointer pr-2 ${source ? "chip-on" : ""}`} value={source}
             onChange={(e) => set("fonte", e.target.value)} aria-label="Filtra per fonte">
             <option value="">Tutte le fonti</option>
@@ -207,7 +206,7 @@ export default function Feed() {
           {groups.map((g) => (
             <section key={g.label}>
               <h2 className="mb-2.5 px-1 text-xs font-bold uppercase tracking-wider text-slate-500 first-letter:uppercase dark:text-slate-400">{g.label}</h2>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {g.items.map((e) => <FeedCard key={e.id} e={e} query={dq} />)}
               </div>
             </section>

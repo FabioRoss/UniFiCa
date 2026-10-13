@@ -35,7 +35,7 @@ export default function Announcements() {
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
       <div className="lg:col-span-2">
         <PageTitle title="Annunci" subtitle="Messaggi tuoi: compaiono in cima alla home e, se vuoi, arrivano come notifica." />
         <div className="card space-y-4 p-5">

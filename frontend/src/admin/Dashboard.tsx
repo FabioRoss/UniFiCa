@@ -76,7 +76,7 @@ export default function Dashboard() {
         <BarChart data={s.updates_per_day} label="Aggiornamenti rilevati al giorno, ultimi 30 giorni" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="card p-5 lg:col-span-2">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-bold">Fonti</h2>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ApiError, type Prefs, type SourceInfo, type Subscription } from "../api";
 import { Icon, TelegramIcon } from "../components/Icon";
-import { ErrorBox, Loading, PageTitle, Spinner, Toggle } from "../components/ui";
+import { ErrorBox, Field, Loading, PageTitle, Spinner, Toggle } from "../components/ui";
 import { useConfig } from "../lib/app";
 import { getToken, platform, pushState, setToken, subscribe, unsubscribe, type PushState } from "../lib/push";
 import { useFetch } from "../lib/useFetch";
@@ -111,7 +111,7 @@ function KeywordInput({ value, onChange }: { value: string[]; onChange: (v: stri
   return (
     <div>
       <div className="flex gap-2">
-        <input className="input" value={draft} placeholder="es. tirocinio, Anatomia, borsa di studio" maxLength={60}
+        <input className="input" value={draft} placeholder="es. tirocinio" maxLength={60}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); add(); } }} />
         <button className="btn-soft shrink-0" onClick={add} disabled={draft.trim().length < 2}><Icon name="plus" className="h-4 w-4" />Aggiungi</button>
@@ -234,10 +234,13 @@ function PrefsEditor({ sub, sources, onSaved }: { sub: Subscription; sources: So
         {mode === "quiet" && p.quiet && (
           <div className="mt-4">
             <p className="mb-3 text-sm muted">Gli avvisi trovati in queste ore ti arrivano tutti insieme alla fine del silenzio.</p>
-            <div className="flex items-center gap-3">
-              <input type="time" className="input" value={p.quiet.start} onChange={(e) => setP({ ...p, quiet: { ...p.quiet!, start: e.target.value } })} aria-label="Inizio silenzio" />
-              <span className="shrink-0 muted">fino alle</span>
-              <input type="time" className="input" value={p.quiet.end} onChange={(e) => setP({ ...p, quiet: { ...p.quiet!, end: e.target.value } })} aria-label="Fine silenzio" />
+            <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
+              <Field label="Dalle">
+                <input type="time" className="input min-w-0 px-3" value={p.quiet.start} onChange={(e) => setP({ ...p, quiet: { ...p.quiet!, start: e.target.value } })} />
+              </Field>
+              <Field label="Alle">
+                <input type="time" className="input min-w-0 px-3" value={p.quiet.end} onChange={(e) => setP({ ...p, quiet: { ...p.quiet!, end: e.target.value } })} />
+              </Field>
             </div>
           </div>
         )}
@@ -246,7 +249,7 @@ function PrefsEditor({ sub, sources, onSaved }: { sub: Subscription; sources: So
             <p className="mb-3 text-sm muted">Un solo messaggio al giorno con tutte le novità.</p>
             <div className="flex items-center gap-3">
               <span className="shrink-0 muted">Ogni giorno alle</span>
-              <input type="time" className="input max-w-36" value={p.digest} onChange={(e) => setP({ ...p, digest: e.target.value })} aria-label="Orario riepilogo" />
+              <input type="time" className="input min-w-0 max-w-36" value={p.digest} onChange={(e) => setP({ ...p, digest: e.target.value })} aria-label="Orario riepilogo" />
             </div>
           </div>
         )}
