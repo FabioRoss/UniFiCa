@@ -68,3 +68,17 @@ def test_page_baseline_moves_to_site_date(db):
     db.commit()
     assert v.item.published_on == dt.date(2026, 10, 5)
     assert v.created_at.date() == dt.date(2026, 10, 5)
+
+
+def test_new_rendering_is_not_a_change(db):
+    # Items stored before richtext.py gain the HTML silently on the next check
+    src = _src(db)
+    v = apply_snapshot(db, src, Snapshot(url="https://x/p", title="ADE", content_text="N° ADE\nTitolo"), [], None,
+                       baseline=True)
+    item = v.item
+    assert not item.meta
+    snap = Snapshot(url="https://x/p", title="ADE", content_text="N° ADE\nTitolo",
+                    meta={"html": "<div class=\"table-wrap\"><table><tr><th>N° ADE</th><th>Titolo</th></tr></table></div>"})
+    assert apply_snapshot(db, src, snap, [], item, baseline=False) is None
+    assert item.meta["html"].startswith('<div class="table-wrap">')
+    assert item.version_count == 1

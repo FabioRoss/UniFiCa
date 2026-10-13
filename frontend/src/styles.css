@@ -128,3 +128,49 @@ body {
 
 mark { background: #fde68a; color: inherit; border-radius: 3px; padding: 0 1px; }
 @media (prefers-color-scheme: dark) { mark { background: #854d0e; } }
+
+/* Page content rendered from the official site (backend richtext.py) */
+.rich { font-size: 15px; line-height: 1.65; color: #1e293b; overflow-wrap: anywhere; }
+.rich > :first-child { margin-top: 0; }
+.rich p, .rich ul, .rich ol, .rich blockquote, .rich pre, .rich .table-wrap { margin: 0.6em 0; }
+.rich h2, .rich h3, .rich h4 { margin: 1.4em 0 0.5em; line-height: 1.3; font-weight: 700; color: #0f172a; }
+.rich h2 { font-size: 1.2em; }
+.rich h3 { font-size: 1.1em; }
+.rich h4 { font-size: 1em; }
+.rich ul { list-style: disc; padding-left: 1.3em; }
+.rich ol { list-style: decimal; padding-left: 1.4em; }
+.rich li { margin: 0.25em 0; }
+.rich li > ul, .rich li > ol { margin: 0.25em 0; }
+.rich strong { font-weight: 650; }
+.rich blockquote { border-left: 3px solid #bfdbfe; padding-left: 0.9em; color: #475569; }
+.rich pre { white-space: pre-wrap; font-size: 0.9em; }
+.rich hr { border: 0; border-top: 1px solid #e2e8f0; margin: 1.4em 0; }
+.rich a { color: #1d4ed8; font-weight: 500; text-decoration: underline; text-decoration-color: #93c5fd; text-underline-offset: 2px; }
+.rich a:hover { text-decoration-color: currentColor; }
+/* File links read like the text they belong to, with a small type badge */
+.rich a[data-file]::after {
+  content: attr(data-file);
+  display: inline-block; margin-left: 0.35em; padding: 0 0.35em; border-radius: 4px;
+  font-size: 0.68em; font-weight: 700; line-height: 1.6; letter-spacing: 0.02em; text-transform: uppercase;
+  vertical-align: 0.12em; text-decoration: none;
+  background: #eff6ff; color: #1d4ed8; box-shadow: inset 0 0 0 1px #bfdbfe;
+}
+.rich .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #e2e8f0; border-radius: 12px; }
+.rich table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.45; overflow-wrap: normal; }
+.rich th, .rich td { padding: 0.55em 0.75em; text-align: left; vertical-align: top; border-top: 1px solid #e2e8f0; min-width: 4.5em; }
+.rich tr:first-child > th, .rich tr:first-child > td { border-top: 0; }
+.rich th { background: #f8fafc; font-weight: 650; color: #0f172a; }
+.rich th + th, .rich td + td, .rich th + td, .rich td + th { border-left: 1px solid #f1f5f9; }
+.rich tbody tr:nth-child(even) > td { background: #fbfcfe; }
+
+@media (prefers-color-scheme: dark) {
+  .rich { color: #e2e8f0; }
+  .rich h2, .rich h3, .rich h4, .rich th { color: #f1f5f9; }
+  .rich blockquote { border-color: #1e3a8a; color: #94a3b8; }
+  .rich hr, .rich .table-wrap, .rich th, .rich td { border-color: #1e293b; }
+  .rich th + th, .rich td + td, .rich th + td, .rich td + th { border-left-color: #1e293b; }
+  .rich th { background: #0f172a; }
+  .rich tbody tr:nth-child(even) > td { background: #0e1628; }
+  .rich a { color: #93c5fd; text-decoration-color: #1e40af; }
+  .rich a[data-file]::after { background: rgba(30, 58, 138, 0.4); color: #bfdbfe; box-shadow: inset 0 0 0 1px #1e40af; }
+}

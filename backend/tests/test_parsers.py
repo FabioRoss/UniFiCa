@@ -74,3 +74,46 @@ def test_esse3_table():
 def test_page_monitor_reads_site_update_date():
     snap = parse_content(fixture("page_lauree.html"), BASE + "vp-114.html", selectors("page", {}))
     assert snap.published_on == dt.date(2026, 10, 6)
+
+
+def test_page_keeps_tables_and_inline_file_links():
+    url = BASE + "vp-118-attivita-didattiche-elettive.html"
+    snap = parse_content(fixture("page_ade.html"), url, selectors("page", {}))
+    html = snap.meta["html"]
+    # The bold first row becomes a header, cells stay on one row
+    assert "<tr><th><strong>N° ADE</strong></th><th><strong>Titolo</strong></th>" in html
+    assert "<td>1/2025</td><td><a href=\"" + BASE + "upload/sub/Ade%20I%20semestre_2025_2026/" in html
+    assert html.count('<div class="table-wrap"><table>') == 2
+    # PDFs are linked from their own text, absolute, marked as files
+    assert ('<a href="' + BASE + 'upload/sub/2020/Avvisi/Libretto%20ADE_2020_2021.pdf" target="_blank" '
+            'rel="noopener noreferrer" data-file="pdf">Libretto ADE</a>') in html
+    assert "Attività didattiche elettive (A.D.E.)" not in html  # title removed like in the text
+    # The plain text (hash and diffs) is unchanged by the rendering
+    assert "N° ADE\nTitolo\nAnno di corso\nCFU" in snap.content_text
+
+
+def test_rich_html_is_sanitised():
+    from app.richtext import to_html
+    from app.text import soup
+
+    evil = soup("""<div id="c">
+      <p onclick="x()" style="color:red" class="k">Ciao <b>mondo</b> &lt;script&gt;</p>
+      <script>alert(1)</script><style>p{}</style><iframe src="https://e.vil"></iframe>
+      <img src="x" onerror="alert(1)">
+      <a href="javascript:alert(1)">js</a> <a href="data:text/html,x">data</a>
+      <a href="//e.vil/a.pdf">rel</a> <a href="mailto:a@b.it">mail</a> <a href="#top">anchor</a>
+      <a href='https://x.it/"onmouseover="a'>q</a>
+      <table><tr><td colspan="2 onmouseover=x" rowspan="3">a</td></tr></table>
+      <svg><a href="https://e.vil">s</a></svg><form><input value="x"></form>
+      <p>&nbsp;</p><span title="t">span</span>
+    </div>""").select_one("#c")
+    out = to_html(evil, "https://www.medicina.unifi.it/p.html")
+    for bad in ("onclick", "style=", "class=\"k\"", "<script", "alert", "<iframe", "<img", "onerror",
+                "javascript:", "data:", "<svg", "<form", "<input", "title=", "#top", "onmouseover=x"):
+        assert bad not in out, bad
+    assert "<p>Ciao <strong>mondo</strong> &lt;script&gt;</p>" in out
+    assert 'href="https://e.vil/a.pdf"' in out and 'data-file="pdf"' in out
+    assert '<a href="mailto:a@b.it">mail</a>' in out
+    assert 'href="https://x.it/&quot;onmouseover=&quot;a"' in out
+    assert '<td rowspan="3">a</td>' in out
+    assert "<p></p>" not in out and "span" in out

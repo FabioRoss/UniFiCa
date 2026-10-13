@@ -126,6 +126,8 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
         "url": item.url,
         "published_on": item.published_on.isoformat() if item.published_on else None,
         "content_text": item.content_text,
+        # Sanitised rendering with tables and inline links (richtext.py); older items have none
+        "html": (item.meta or {}).get("html") or None,
         "attachments": [att_out(a) for a in item.attachments],
         "links": item.links,
         "first_seen_at": iso(item.first_seen_at),

@@ -110,6 +110,7 @@ export interface ItemDetail {
   url: string;
   published_on: string | null;
   content_text: string;
+  html: string | null;
   attachments: Attachment[];
   links: { url: string; text: string }[];
   first_seen_at: string;

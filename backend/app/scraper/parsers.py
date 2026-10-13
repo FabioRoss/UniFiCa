@@ -15,6 +15,7 @@ from urllib.parse import unquote, urljoin, urlparse
 
 from bs4 import Tag
 
+from .. import richtext
 from ..text import html_to_text, normalize_line, soup
 
 PRESETS: dict[str, dict[str, str]] = {
@@ -204,6 +205,7 @@ def parse_content(html: str, url: str, cfg: dict[str, str]) -> Snapshot:
                 continue
 
     text = html_to_text(node)
+    rich = richtext.to_html(node, url)
     date_node = None
     if node is not None:
         date_node = node.select_one(".right-text")
@@ -220,4 +222,5 @@ def parse_content(html: str, url: str, cfg: dict[str, str]) -> Snapshot:
         published_on=published,
         attachment_links=attachments,
         links=links,
+        meta={"html": rich} if rich else {},
     )
