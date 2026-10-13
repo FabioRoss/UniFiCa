@@ -309,6 +309,7 @@ export default function Sources() {
                     <p className="font-semibold">{s.name}</p>
                     <Badge tone="slate">{KINDS.find((k) => k.value === s.kind)?.label}</Badge>
                     {!s.baseline_done && <Badge tone="amber">primo controllo in attesa</Badge>}
+                    {s.config.snapshot_only && <Badge tone="brand">aggiornata dallo snapshot giornaliero</Badge>}
                   </div>
                   <a href={s.url} target="_blank" rel="noopener noreferrer" className="block truncate text-xs text-brand-700 hover:underline dark:text-brand-300">{s.url}</a>
                   <p className="mt-1 text-xs muted">

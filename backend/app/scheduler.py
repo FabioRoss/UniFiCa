@@ -30,6 +30,8 @@ def due_sources() -> list[int]:
     try:
         out = []
         for s in db.scalars(select(Source).where(Source.enabled.is_(True)).order_by(Source.position, Source.id)):
+            if (s.config or {}).get("snapshot_only"):
+                continue  # fed by the daily snapshot import (see exam_snapshot.py)
             interval = dt.timedelta(minutes=max(1, s.interval_minutes))
             # Back off after repeated failures (max 2h) so a broken site is not hammered
             if s.consecutive_failures:

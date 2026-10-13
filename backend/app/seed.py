@@ -31,6 +31,12 @@ PAGES = [
 ]
 
 
+# ESSE3 exam-board settings per exam source (also used by `fetch-exams`)
+EXAM_SOURCES: dict[str, dict[str, str]] = {
+    "medicina-appelli": {"fac_id": "10267", "cds_ids": "11948,10670", "months_ahead": "6"},
+}
+
+
 def _maps(addr: str) -> str:
     return "https://www.google.com/maps/search/?api=1&query=" + quote_plus(addr + ", Firenze")
 
@@ -124,7 +130,7 @@ def seed(db: Session) -> None:
         db.add(Source(
             slug="medicina-appelli", name="Appelli d'esame Medicina", category=CAT, kind="exams",
             parser="esse3_appelli", url="https://studenti.unifi.it/ListaAppelliOfferta.do",
-            config={"fac_id": "10267", "cds_ids": "11948,10670", "months_ahead": "6"},
+            config=dict(EXAM_SOURCES["medicina-appelli"]),
             interval_minutes=60, track_attachments=False, position=len(PAGES) + 1,
         ))
     if not db.scalar(select(func.count()).select_from(LinkGroup)):

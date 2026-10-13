@@ -151,24 +151,35 @@ docker compose up -d
 
 ## If the server cannot read ESSE3 (exam sessions)
 
-ESSE3 is behind Cloudflare, which may challenge datacenter IPs: the
-`medicina-appelli` source then fails with `HTTP 403` (Admin, Fonti shows it).
-The right fix is asking the university to allow the server's IP. Meanwhile,
-sessions fetched elsewhere can be imported; this never sends notifications,
-and the Appelli page shows the snapshot's date with a "check the official
-board" note until a real check succeeds:
+ESSE3 is behind Cloudflare, which challenges datacenter IPs: the
+`medicina-appelli` source then fails with `HTTP 403`. UniFI's IT could not add
+an exception for the server and agreed to a workaround. GitHub's runners are
+not challenged, so a scheduled GitHub Action reads the board every day and
+publishes it on the `esse3-data` branch; the server imports it.
+
+**One-time setup on the server** (from the app folder):
 
 ```bash
-cd /srv/openunifi
-git pull
-docker compose cp deploy/data/esse3-medicina.json openunifi-app:/tmp/esse3.json
-docker compose exec openunifi-app python -m app.cli import-exams /tmp/esse3.json
+git pull && docker compose up -d --build
+./deploy/esse3-sync.sh          # first import: stored as baseline, nobody notified
+crontab -e                      # then add this line (hourly; does nothing without a new snapshot):
+#   23 * * * * cd /home/debian/openunifi && ./deploy/esse3-sync.sh >> backups/esse3-sync.log 2>&1
 ```
 
-A new snapshot is made, where ESSE3 is reachable, with
-`python -m app.cli export-exams esse3-medicina.json`. Once the server can read
-ESSE3 again, its first check compares against the imported data and notifies
-only real differences.
+The cron user must be able to run `docker` without sudo (`sudo usermod -aG
+docker debian`, then log in again) and `git fetch` without a password (the same
+deploy key or token used for `git pull`).
+
+From then on each import behaves like a real check: new sessions and moved
+dates are notified, the Appelli page shows when the board was read, and the
+server stops trying ESSE3 itself for that source. To refresh immediately, open
+the repo's Actions tab, pick `esse3-snapshot`, "Run workflow". If ESSE3 ever
+works from the server again: `docker compose exec openunifi-app python -m
+app.cli exams-direct` and remove the cron line.
+
+A one-off file can still be loaded by hand (never notifies):
+`python -m app.cli import-exams FILE` (inside the container), and made where
+ESSE3 is reachable with `python -m app.cli fetch-exams FILE`.
 
 ## Only when you want to
 
