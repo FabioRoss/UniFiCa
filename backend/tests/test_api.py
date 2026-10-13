@@ -13,8 +13,11 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "telegram_bot_token", "")
     monkeypatch.setattr(settings, "admin_password", "segreta")
     monkeypatch.setattr(settings, "frontend_dist", str(tmp_path / "dist"))
+    from app import security
     from app.main import app
 
+    security._failures.clear()
+    security._all_failures.clear()
     with TestClient(app) as c:
         yield c
 
@@ -108,3 +111,57 @@ def test_password_hash():
 
     h = hash_password("abc")
     assert "$" not in h and verify_password("abc", h) and not verify_password("abd", h)
+
+
+def _login(client, password="segreta", xff=None):
+    headers = dict(H)
+    if xff:
+        headers["X-Forwarded-For"] = xff
+    return client.post("/api/admin/login", json={"username": "admin", "password": password}, headers=headers)
+
+
+def test_every_admin_route_requires_login(client):
+    from fastapi.routing import APIRoute
+
+    from app.main import app
+
+    checked = 0
+    for route in app.routes:
+        if not isinstance(route, APIRoute) or not route.path.startswith("/api/admin"):
+            continue
+        if route.path in ("/api/admin/login", "/api/admin/logout"):
+            continue
+        path = route.path.replace("{", "").replace("}", "")  # params become literal text
+        path = "/".join("1" if seg.endswith("_id") else seg for seg in path.split("/"))
+        for method in route.methods:
+            r = client.request(method, path, headers=H, json={})
+            assert r.status_code == 401, (method, route.path, r.status_code)
+            checked += 1
+    assert checked > 25
+
+
+def test_spoofed_forwarded_for_does_not_bypass_throttle(client):
+    # Caddy appends the real peer last; the client controls the first entries
+    for i in range(8):
+        assert _login(client, "sbagliata", xff=f"10.0.0.{i}, 203.0.113.7").status_code == 401
+    assert _login(client, "segreta", xff="10.9.9.9, 203.0.113.7").status_code == 429
+    assert _login(client, "segreta", xff="198.51.100.1").status_code == 200  # other people unaffected
+
+
+def test_password_change_logs_out_sessions(client, monkeypatch):
+    assert _login(client).status_code == 200
+    assert client.get("/api/admin/me").status_code == 200
+    monkeypatch.setattr(settings, "admin_password", "una-nuova-password")
+    assert client.get("/api/admin/me").status_code == 401
+
+
+def test_placeholder_password_keeps_panel_locked(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_password", "CHANGE_ME")
+    assert _login(client, "CHANGE_ME").status_code == 503
+    monkeypatch.setattr(settings, "admin_password", "")
+    assert _login(client, "").status_code == 503
+
+
+def test_forged_cookie_rejected(client):
+    client.cookies.set("openunifi_admin", "eyJ1IjoiYWRtaW4ifQ.forged.signature", path="/api")
+    assert client.get("/api/admin/stats").status_code == 401

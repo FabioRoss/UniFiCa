@@ -25,7 +25,8 @@ from ..notify import prefs as P
 from ..scraper import engine
 from ..scraper.parsers import PARSERS, PRESETS
 from ..security import (
-    COOKIE, SESSION_DAYS, make_session, record_failure, require_admin, throttled, verify_password,
+    COOKIE, SESSION_DAYS, admin_locked, client_ip, make_session, record_failure, require_admin, throttled,
+    verify_password,
 )
 from .public import att_out, iso, link_out
 
@@ -44,12 +45,15 @@ class LoginIn(BaseModel):
 def login(body: LoginIn, request: Request, response: Response, db: Session = Depends(get_db)) -> dict[str, Any]:
     if request.headers.get("x-openunifi") != "1":
         raise HTTPException(403, "Richiesta non valida")
-    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "?").split(",")[0]
+    if admin_locked():
+        raise HTTPException(503, "Pannello bloccato: imposta OPENUNIFI_ADMIN_PASSWORD nel file .env")
+    ip = client_ip(request)
     if throttled(ip):
         raise HTTPException(429, "Troppi tentativi, riprova tra qualche minuto")
-    ok = secrets.compare_digest(body.username, settings.admin_user) and verify_password(
-        body.password, settings.admin_password
-    )
+    # Evaluate both, so response time does not reveal whether the user exists
+    user_ok = secrets.compare_digest(body.username.encode(), settings.admin_user.encode())
+    pass_ok = verify_password(body.password, settings.admin_password)
+    ok = user_ok and pass_ok
     if not ok:
         record_failure(ip)
         raise HTTPException(401, "Credenziali non valide")

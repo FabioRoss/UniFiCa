@@ -14,6 +14,7 @@ from .config import settings
 from .db import SessionLocal, init_engine
 from .notify import telegram
 from .routers import admin, public, subscription
+from .security import admin_locked
 from .seed import seed
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -33,8 +34,10 @@ async def lifespan(app: FastAPI):
         settings_store.secret_key(db)
     finally:
         db.close()
-    if not settings.admin_password:
-        log.warning("OPENUNIFI_ADMIN_PASSWORD is empty: the admin panel is locked")
+    if admin_locked():
+        log.warning("OPENUNIFI_ADMIN_PASSWORD is empty or a placeholder: the admin panel is locked")
+    elif not settings.admin_password.startswith("pbkdf2_sha256:") and len(settings.admin_password) < 12:
+        log.warning("The admin password is short: use 12+ characters (python -m app.cli hash-password)")
 
     tasks = []
     if settings.scheduler_enabled:
@@ -62,6 +65,8 @@ async def headers(request: Request, call_next):  # noqa: ANN001, ANN201
     resp.headers.setdefault("X-Frame-Options", "DENY")
     if request.url.path.startswith("/api/"):
         resp.headers.setdefault("Cache-Control", "no-store")
+    if request.url.path.startswith(("/admin", "/api/admin")):
+        resp.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
     return resp
 
 

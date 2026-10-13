@@ -75,6 +75,20 @@ Open `https://<your domain>` and `https://<your domain>/admin`.
   archive), pages and exam sessions are stored without notifying anyone.
   From the second check on, every new or changed item is notified.
 
+### Admin panel security
+
+`/admin` asks for the user and password from `.env`; every `/api/admin` call
+is refused without a valid session. In detail:
+
+- Session: signed, `HttpOnly`, `Secure`, `SameSite=Strict` cookie, valid 30 days.
+  Changing `OPENUNIFI_ADMIN_PASSWORD` (or the user) logs out every session.
+- Brute force: 8 wrong attempts per IP, and 40 overall, in 15 minutes lock
+  the login for a while. The IP is the one Caddy saw, so faking
+  `X-Forwarded-For` does not help.
+- Writes also need a custom header only the app sends (CSRF protection).
+- With an empty or placeholder password (`CHANGE_ME`) nobody can log in.
+- The admin pages are marked `noindex` for search engines.
+
 ## 4. Telegram bot (optional, free)
 
 1. On Telegram, talk to **@BotFather**: `/newbot`, choose a name and a username

@@ -1,5 +1,10 @@
 """Admin authentication: one account from the environment, signed session
-cookie, simple in-memory throttle on failed logins."""
+cookie, in-memory throttle on failed logins.
+
+- Login throttle: 8 failures per IP and 40 overall per 15 minutes.
+- Sessions carry a fingerprint of the credentials, so changing the admin
+  password (or user) logs out every existing session.
+- An empty or placeholder password keeps the panel locked."""
 from __future__ import annotations
 
 import hashlib
@@ -20,7 +25,13 @@ COOKIE = "openunifi_admin"
 SESSION_DAYS = 30
 PBKDF2_ROUNDS = 600_000
 
+WINDOW_SECONDS = 900
+MAX_FAILURES_PER_IP = 8
+MAX_FAILURES_TOTAL = 40  # spread-out guessing from many IPs
+PLACEHOLDERS = {"", "change_me", "changeme", "admin", "password"}
+
 _failures: dict[str, deque[float]] = defaultdict(deque)
+_all_failures: deque[float] = deque()
 
 
 def hash_password(password: str) -> str:
@@ -43,16 +54,42 @@ def verify_password(password: str, stored: str) -> bool:
     return hmac.compare_digest(password.encode(), stored.encode())
 
 
-def throttled(ip: str) -> bool:
-    q = _failures[ip]
-    now = time.monotonic()
-    while q and now - q[0] > 900:
+def admin_locked() -> bool:
+    """No usable password configured: nobody can log in."""
+    return settings.admin_password.strip().lower() in PLACEHOLDERS
+
+
+def client_ip(request: Request) -> str:
+    """The address Caddy saw. Caddy appends the real peer to X-Forwarded-For,
+    so the *last* entry is trustworthy; earlier ones are client-supplied."""
+    xff = request.headers.get("x-forwarded-for", "")
+    if xff.strip():
+        return xff.split(",")[-1].strip()
+    return request.client.host if request.client else "?"
+
+
+def _prune(q: deque[float], now: float) -> None:
+    while q and now - q[0] > WINDOW_SECONDS:
         q.popleft()
-    return len(q) >= 8
+
+
+def throttled(ip: str) -> bool:
+    now = time.monotonic()
+    q = _failures[ip]
+    _prune(q, now)
+    _prune(_all_failures, now)
+    return len(q) >= MAX_FAILURES_PER_IP or len(_all_failures) >= MAX_FAILURES_TOTAL
 
 
 def record_failure(ip: str) -> None:
-    _failures[ip].append(time.monotonic())
+    now = time.monotonic()
+    _failures[ip].append(now)
+    _all_failures.append(now)
+
+
+def _fingerprint() -> str:
+    raw = f"{settings.admin_user}\x00{settings.admin_password}".encode()
+    return hashlib.sha256(raw).hexdigest()[:16]
 
 
 def _serializer(db: Session) -> URLSafeTimedSerializer:
@@ -60,7 +97,7 @@ def _serializer(db: Session) -> URLSafeTimedSerializer:
 
 
 def make_session(db: Session) -> str:
-    return _serializer(db).dumps({"u": settings.admin_user, "n": secrets.token_hex(8)})
+    return _serializer(db).dumps({"u": settings.admin_user, "f": _fingerprint(), "n": secrets.token_hex(8)})
 
 
 def require_admin(request: Request, db: Session = Depends(get_db)) -> str:
@@ -69,10 +106,10 @@ def require_admin(request: Request, db: Session = Depends(get_db)) -> str:
     if request.method not in ("GET", "HEAD") and request.headers.get("x-openunifi") != "1":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Richiesta non valida")
     raw = request.cookies.get(COOKIE)
-    if raw:
+    if raw and not admin_locked():
         try:
             data = _serializer(db).loads(raw, max_age=SESSION_DAYS * 86400)
-            if data.get("u") == settings.admin_user:
+            if data.get("u") == settings.admin_user and hmac.compare_digest(data.get("f", ""), _fingerprint()):
                 return data["u"]
         except BadSignature:
             pass
