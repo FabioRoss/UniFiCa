@@ -1,13 +1,19 @@
-"""Background loop: run due sources one at a time (polite to the unifi
-servers) and flush held notifications every minute."""
+"""Background loop, everything automatic (no cron needed):
+- run due sources one at a time (polite to the unifi servers),
+- flush held notifications (quiet hours, digests) every minute,
+- take the daily database backup."""
 from __future__ import annotations
 
 import asyncio
 import datetime as dt
 import logging
 
+from zoneinfo import ZoneInfo
+
 from sqlalchemy import select
 
+from . import backup
+from .config import settings
 from .db import SessionLocal
 from .models import Source, utcnow
 from .notify import dispatcher
@@ -46,6 +52,8 @@ async def run_forever() -> None:
             if loop.time() - last_flush >= 55:
                 last_flush = loop.time()
                 await dispatcher.flush_pending()
+                if settings.backup_keep > 0 and backup.due(dt.datetime.now(ZoneInfo(settings.timezone))):
+                    await asyncio.to_thread(backup.run)
         except asyncio.CancelledError:
             raise
         except Exception:

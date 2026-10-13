@@ -3,6 +3,7 @@
     python -m app.cli hash-password            # prompt, print a hash for .env
     python -m app.cli run [slug ...]           # check sources now (all if none)
     python -m app.cli vapid                    # print the VAPID public key
+    python -m app.cli backup                   # take a database backup now
 """
 from __future__ import annotations
 
@@ -28,6 +29,7 @@ def main() -> None:
     run.add_argument("slugs", nargs="*")
     run.add_argument("--no-notify", action="store_true")
     sub.add_parser("vapid")
+    sub.add_parser("backup")
     args = ap.parse_args()
 
     if args.cmd == "hash-password":
@@ -40,6 +42,11 @@ def main() -> None:
     init_engine(settings.db_path)
     db = SessionLocal()
     seed(db)
+    if args.cmd == "backup":
+        from . import backup
+
+        print(backup.run())
+        return
     if args.cmd == "vapid":
         print(settings_store.vapid_keys(db)["public"])
         return

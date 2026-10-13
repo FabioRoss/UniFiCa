@@ -145,7 +145,18 @@ def stats(db: Session = Depends(get_db)) -> dict[str, Any]:
         "alerts": db.scalar(select(func.count()).select_from(Alert).where(Alert.resolved.is_(False))) or 0,
         "telegram": {"enabled": telegram.enabled(), "bot": telegram.bot_username(),
                      "channel": settings.telegram_channel},
+        "backup": _backup_info(),
     }
+
+
+def _backup_info() -> dict[str, Any]:
+    from .. import backup
+
+    files = backup.backups()
+    last = files[-1] if files else None
+    return {"count": len(files), "last": last.name if last else None,
+            "last_at": iso(dt.datetime.fromtimestamp(last.stat().st_mtime, dt.timezone.utc).replace(tzinfo=None))
+            if last else None}
 
 
 # ── Sources ──────────────────────────────────────────────────────────────

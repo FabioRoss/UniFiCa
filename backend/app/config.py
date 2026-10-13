@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     max_attachment_mb: int = 25
     timezone: str = "Europe/Rome"
 
+    # Automatic daily database backup (local hour, copies kept). 0 keeps none.
+    backup_hour: int = 4
+    backup_keep: int = 14
+
     @property
     def db_path(self) -> Path:
         return Path(self.data_dir) / "openunifi.db"

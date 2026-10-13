@@ -15,7 +15,8 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      - data:/data                  # DB + generated VAPID keys: back this up
+      - data:/data                  # DB + generated VAPID keys (never delete)
+      - ./backups:/data/backups     # automatic nightly DB backups, visible on the host
     expose:
       - "8000"
     networks:

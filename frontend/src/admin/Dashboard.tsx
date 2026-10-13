@@ -17,6 +17,7 @@ interface Stats {
   sources: { id: number; name: string; enabled: boolean; followers: number; ok: boolean; last_run_at: string | null; last_ok_at: string | null; error: string | null }[];
   alerts: number;
   telegram: { enabled: boolean; bot: string | null; channel: string };
+  backup: { count: number; last: string | null; last_at: string | null };
 }
 
 interface Alert { id: number; created_at: string; level: string; message: string; resolved: boolean }
@@ -125,10 +126,13 @@ export default function Dashboard() {
             ) : <p className="text-sm muted">Nessuna per ora.</p>}
           </div>
           <div className="card p-5 text-sm">
-            <h2 className="mb-2 font-bold">Telegram</h2>
+            <h2 className="mb-2 font-bold">Sistema</h2>
             {s.telegram.enabled ? (
               <p>Bot {s.telegram.bot ? <b>@{s.telegram.bot}</b> : "in avvio"}{s.telegram.channel ? <> · canale <b>{s.telegram.channel}</b></> : null}</p>
             ) : <p className="muted">Non configurato (OPENUNIFI_TELEGRAM_BOT_TOKEN).</p>}
+            <p className="mt-2">
+              Backup automatico: {s.backup.last_at ? <>ultimo {relTime(s.backup.last_at)} ({s.backup.count} conservati)</> : <span className="text-amber-700 dark:text-amber-300">ancora nessuno (ogni notte alle 4)</span>}
+            </p>
             <p className="mt-2 muted">{s.items} contenuti archiviati · {s.subscribers.admins} destinatari avvisi admin</p>
           </div>
         </div>

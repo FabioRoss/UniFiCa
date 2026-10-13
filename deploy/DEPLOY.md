@@ -103,18 +103,42 @@ Open `https://<your domain>` and `https://<your domain>/admin`.
 
 The bot uses long polling: nothing to expose, no webhook to configure.
 
-## Everyday operations
+## What runs by itself
+
+Once `docker compose up -d` is done there is nothing to schedule: the app has
+its own scheduler (no cron needed) and Docker restarts it after crashes or
+server reboots (`restart: unless-stopped`).
+
+| Job | When |
+|---|---|
+| Check each source for news and changes | its own interval, set per source in Admin → Fonti (news every 10 min, timetables 30 min, regulations daily, exam board hourly) |
+| Send notifications | right after a change is found |
+| Deliver held notifications (quiet hours, daily digests) | every minute |
+| Back off a source that keeps failing, alert you after 3 failures | automatic |
+| Database backup into `/srv/openunifi/backups` | every night at 04:00, last 14 kept |
+
+The backups are plain files on the server, so copying them somewhere else
+(another machine, cloud storage) is a normal file copy. To restore one:
 
 ```bash
 cd /srv/openunifi
-git pull && docker compose up -d --build              # update
-docker compose logs -f openunifi-app                  # logs
-docker compose exec openunifi-app python -m app.cli run medicina-news   # check a source now
-
-# backup (SQLite online backup, safe while running)
-docker compose exec openunifi-app python -c "import sqlite3; s=sqlite3.connect('/data/openunifi.db'); d=sqlite3.connect('/data/backup.db'); s.backup(d)"
-docker cp openunifi-app:/data/backup.db ./openunifi-$(date +%F).db
+docker compose stop openunifi-app
+docker compose run --rm --no-deps openunifi-app sh -c \
+  "rm -f /data/openunifi.db-wal /data/openunifi.db-shm && cp /data/backups/openunifi-2026-10-13.db /data/openunifi.db"
+docker compose up -d
 ```
+
+## Only when you want to
+
+```bash
+cd /srv/openunifi
+git pull && docker compose up -d --build     # install a new version
+docker compose logs -f openunifi-app         # look at the logs
+```
+
+Updates stay manual on purpose: deploying new code automatically could take
+the site down without anyone noticing. A source can also be checked
+immediately from Admin → Fonti (the refresh button), no terminal needed.
 
 ## Traffic stats (optional)
 
