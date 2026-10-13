@@ -199,8 +199,12 @@ def exams(
     recent = set(db.scalars(select(Version.item_id).where(
         Version.kind == "new", Version.baseline.is_(False),
         Version.created_at >= utcnow() - dt.timedelta(days=3))))
+    from ..exam_snapshot import snapshot_at
+
     return {
-        "sources": [source_out(s) for s in db.scalars(
+        # snapshot_at: when imported data was fetched elsewhere (the page shows
+        # it as the data's date until a real check succeeds)
+        "sources": [{**source_out(s), "snapshot_at": snapshot_at(db, s.id)} for s in db.scalars(
             select(Source).where(Source.kind == "exams", Source.enabled.is_(True)))],
         "exams": [
             {"id": i.id, "title": i.title, "url": i.url, "date": i.published_on.isoformat(),

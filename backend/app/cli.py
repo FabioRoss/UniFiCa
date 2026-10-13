@@ -4,6 +4,8 @@
     python -m app.cli run [slug ...]           # check sources now (all if none)
     python -m app.cli vapid                    # print the VAPID public key
     python -m app.cli backup                   # take a database backup now
+    python -m app.cli export-exams FILE [--source SLUG]   # exam sessions to JSON
+    python -m app.cli import-exams FILE [--source SLUG]   # load them (no notifications)
 """
 from __future__ import annotations
 
@@ -30,6 +32,10 @@ def main() -> None:
     run.add_argument("--no-notify", action="store_true")
     sub.add_parser("vapid")
     sub.add_parser("backup")
+    for name in ("export-exams", "import-exams"):
+        cmd = sub.add_parser(name)
+        cmd.add_argument("file")
+        cmd.add_argument("--source", default=None, help="default: medicina-appelli / the file's source")
     args = ap.parse_args()
 
     if args.cmd == "hash-password":
@@ -42,6 +48,23 @@ def main() -> None:
     init_engine(settings.db_path)
     db = SessionLocal()
     seed(db)
+    if args.cmd in ("export-exams", "import-exams"):
+        import json
+
+        from . import exam_snapshot
+
+        if args.cmd == "export-exams":
+            data = exam_snapshot.export(db, args.source or "medicina-appelli")
+            with open(args.file, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=1)
+            print(f"{len(data['sessions'])} appelli esportati in {args.file} (dati del {data['fetched_at']})")
+        else:
+            with open(args.file, encoding="utf-8") as f:
+                data = json.load(f)
+            res = exam_snapshot.import_(db, data, args.source)
+            print(f"Importati: {res['sessions']} appelli ({res['added']} nuovi, {res['changed']} aggiornati), "
+                  f"dati del {data['fetched_at']}. Nessuna notifica inviata.")
+        return
     if args.cmd == "backup":
         from . import backup
 

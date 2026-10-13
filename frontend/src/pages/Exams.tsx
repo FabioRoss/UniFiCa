@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import type { Exam, SourceInfo } from "../api";
 import { Icon } from "../components/Icon";
 import { Badge, Empty, ErrorBox, Highlight, Loading, PageTitle, SearchBox } from "../components/ui";
-import { daysUntil, fmtDate, fmtDay, matchesQuery, nameCase, titleCase } from "../lib/format";
+import { daysUntil, fmtDate, fmtDateTime, fmtDay, matchesQuery, nameCase, relTime, titleCase } from "../lib/format";
 import { useFetch } from "../lib/useFetch";
 
 type Filter = "all" | "open" | "soon";
@@ -23,7 +23,7 @@ function monthLabel(iso: string) {
 }
 
 export default function Exams() {
-  const { data, error, loading, reload } = useFetch<{ exams: Exam[]; sources: SourceInfo[] }>("/api/exams");
+  const { data, error, loading, reload } = useFetch<{ exams: Exam[]; sources: (SourceInfo & { snapshot_at: string | null })[] }>("/api/exams");
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -34,6 +34,12 @@ export default function Exams() {
     if (filter === "soon") xs = xs.filter((e) => daysUntil(e.date) <= 14);
     return xs;
   }, [data, q, filter]);
+
+  // Live data says "controllata X fa"; imported data (server cannot reach
+  // ESSE3) carries its date instead, until a real check is newer.
+  const src = data?.sources[0];
+  const snapshotAt = src?.snapshot_at && (!src.last_ok_at || src.snapshot_at > src.last_ok_at) ? src.snapshot_at : null;
+  const checkedAt = !snapshotAt ? src?.last_ok_at ?? null : null;
 
   const months = useMemo(() => {
     const out: { label: string; items: Exam[] }[] = [];
@@ -48,11 +54,21 @@ export default function Exams() {
   return (
     <div>
       <PageTitle title="Appelli d'esame"
-        subtitle={<>Dalla bacheca pubblica ESSE3, aggiornata ogni ora. Per iscriverti usa sempre lo <a className="font-semibold text-brand-700 underline dark:text-brand-300" href="https://studenti.unifi.it/" target="_blank" rel="noopener noreferrer">Sportello studenti</a>.</>} />
+        subtitle={<>Dalla bacheca pubblica ESSE3{checkedAt ? <>, controllata {relTime(checkedAt)}</> : null}. Per iscriverti usa sempre lo <a className="font-semibold text-brand-700 underline dark:text-brand-300" href="https://studenti.unifi.it/" target="_blank" rel="noopener noreferrer">Sportello studenti</a>.</>} />
+      {snapshotAt && (
+        <div className="mb-4 flex gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
+          <Icon name="alert" className="mt-0.5 h-5 w-5 shrink-0" />
+          <p>
+            Dati della bacheca aggiornati al <b>{fmtDateTime(snapshotAt)}</b>: al momento non riusciamo a controllarla in automatico.
+            Date e orari potrebbero essere cambiati, verifica sempre sulla{" "}
+            <a className="font-semibold underline" href="https://studenti.unifi.it/ListaAppelliOfferta.do" target="_blank" rel="noopener noreferrer">bacheca ufficiale</a>.
+          </p>
+        </div>
+      )}
 
       <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 -mx-4 mb-4 space-y-3 bg-[#f5f8ff]/90 px-4 pb-3 pt-1 backdrop-blur-xl dark:bg-[#0b1220]/90">
-        <SearchBox value={q} onChange={setQ} placeholder="Cerca un esame o un docente..." />
-        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+        <SearchBox value={q} onChange={setQ} placeholder="Cerca esame o docente..." />
+        <div className="flex flex-wrap gap-2">
           {([["all", "Tutti"], ["open", "Iscrizioni aperte"], ["soon", "Prossimi 14 giorni"]] as [Filter, string][]).map(([k, l]) => (
             <button key={k} className={`chip shrink-0 ${filter === k ? "chip-on" : ""}`} onClick={() => setFilter(k)}>{l}</button>
           ))}
@@ -70,7 +86,7 @@ export default function Exams() {
           {months.map((m) => (
             <section key={m.label}>
               <h2 className="mb-2.5 px-1 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{m.label}</h2>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {m.items.map((e) => {
                   const d = fmtDay(e.date);
                   const reg = regState(e);

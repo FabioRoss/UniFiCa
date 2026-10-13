@@ -149,6 +149,27 @@ docker compose run --rm --no-deps openunifi-app sh -c \
 docker compose up -d
 ```
 
+## If the server cannot read ESSE3 (exam sessions)
+
+ESSE3 is behind Cloudflare, which may challenge datacenter IPs: the
+`medicina-appelli` source then fails with `HTTP 403` (Admin, Fonti shows it).
+The right fix is asking the university to allow the server's IP. Meanwhile,
+sessions fetched elsewhere can be imported; this never sends notifications,
+and the Appelli page shows the snapshot's date with a "check the official
+board" note until a real check succeeds:
+
+```bash
+cd /srv/openunifi
+git pull
+docker compose cp deploy/data/esse3-medicina.json openunifi-app:/tmp/esse3.json
+docker compose exec openunifi-app python -m app.cli import-exams /tmp/esse3.json
+```
+
+A new snapshot is made, where ESSE3 is reachable, with
+`python -m app.cli export-exams esse3-medicina.json`. Once the server can read
+ESSE3 again, its first check compares against the imported data and notifies
+only real differences.
+
 ## Only when you want to
 
 ```bash
