@@ -240,7 +240,14 @@ def update_source(source_id: int, body: SourceIn, db: Session = Depends(get_db))
     if s is None:
         raise HTTPException(404)
     url_changed = s.url != body.url or s.parser != body.parser
+    was_direct = not (s.config or {}).get("snapshot_only")
     _apply_source(s, body)
+    if was_direct and (s.config or {}).get("snapshot_only"):
+        # Direct checks switched off: their errors (e.g. ESSE3's 403) no longer apply
+        s.last_error = None
+        s.consecutive_failures = 0
+        for a in db.scalars(select(Alert).where(Alert.source_id == s.id, Alert.resolved.is_(False))):
+            a.resolved = True
     if url_changed:
         # A new target page: take a fresh baseline instead of notifying everything as new.
         s.baseline_done = False

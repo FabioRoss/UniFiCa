@@ -14,7 +14,8 @@ interface AdminSource {
   parser: string;
   url: string;
   archive_url: string | null;
-  config: Record<string, string>;
+  // snapshot_only: direct ESSE3 checks switched off (fed by the daily snapshot)
+  config: Record<string, string | boolean>;
   interval_minutes: number;
   enabled: boolean;
   track_attachments: boolean;
@@ -58,13 +59,13 @@ interface Preview {
   detail?: { title: string; text: string; attachments: { url: string; name: string }[] } | null;
 }
 
-function Esse3Picker({ config, onChange }: { config: Record<string, string>; onChange: (c: Record<string, string>) => void }) {
+function Esse3Picker({ config, onChange }: { config: Record<string, string | boolean>; onChange: (c: Record<string, string | boolean>) => void }) {
   const [schools, setSchools] = useState<{ value: string; label: string }[]>([]);
   const [courses, setCourses] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const fac = config.fac_id ?? "";
-  const cds = (config.cds_ids ?? "").split(",").filter(Boolean);
+  const fac = String(config.fac_id ?? "");
+  const cds = String(config.cds_ids ?? "").split(",").filter(Boolean);
 
   useEffect(() => {
     setLoading(true);
@@ -100,7 +101,7 @@ function Esse3Picker({ config, onChange }: { config: Record<string, string>; onC
         </Field>
       )}
       <Field label="Mesi in avanti">
-        <input className="input max-w-28" type="number" min={1} max={12} value={config.months_ahead ?? "6"} onChange={(e) => onChange({ ...config, months_ahead: e.target.value })} />
+        <input className="input max-w-28" type="number" min={1} max={12} value={String(config.months_ahead ?? "6")} onChange={(e) => onChange({ ...config, months_ahead: e.target.value })} />
       </Field>
     </div>
   );
@@ -201,7 +202,13 @@ function SourceForm({ initial, presets, onClose, onSaved }: {
         <Field label="Ordine"><input className="input" type="number" value={d.position} onChange={(e) => setD({ ...d, position: Number(e.target.value) })} /></Field>
       </div>
       <div className="divide-y divide-slate-100 dark:divide-slate-800">
-        <Toggle checked={d.enabled} onChange={(v) => setD({ ...d, enabled: v })} label="Attiva" />
+        <Toggle checked={d.enabled} onChange={(v) => setD({ ...d, enabled: v })} label="Attiva"
+          hint={d.kind === "exams" ? "Spenta: appelli nascosti dal sito, niente controlli né import dello snapshot giornaliero" : undefined} />
+        {d.kind === "exams" && (
+          <Toggle checked={!d.config.snapshot_only} onChange={(v) => setD({ ...d, config: { ...d.config, snapshot_only: !v } })}
+            label="Controllo diretto dal server"
+            hint="Il server legge ESSE3 da solo alla frequenza scelta. Spegnilo se ESSE3 gli risponde 403: gli appelli continuano ad arrivare dallo snapshot giornaliero (GitHub Actions + cron)" />
+        )}
         {d.kind !== "exams" && <Toggle checked={d.track_attachments} onChange={(v) => setD({ ...d, track_attachments: v })} label="Controlla gli allegati" hint="Scarica PDF e documenti per accorgersi quando vengono sostituiti" />}
       </div>
 
@@ -214,7 +221,7 @@ function SourceForm({ initial, presets, onClose, onSaved }: {
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {selectorKeys.map((k) => (
                 <Field key={k} label={SELECTOR_LABELS[k]}>
-                  <input className="input font-mono text-[13px]" value={d.config[k] ?? ""} placeholder={preset[k]}
+                  <input className="input font-mono text-[13px]" value={String(d.config[k] ?? "")} placeholder={preset[k]}
                     onChange={(e) => setD({ ...d, config: { ...d.config, [k]: e.target.value } })} />
                 </Field>
               ))}
@@ -309,7 +316,7 @@ export default function Sources() {
                     <p className="font-semibold">{s.name}</p>
                     <Badge tone="slate">{KINDS.find((k) => k.value === s.kind)?.label}</Badge>
                     {!s.baseline_done && <Badge tone="amber">primo controllo in attesa</Badge>}
-                    {s.config.snapshot_only && <Badge tone="brand">aggiornata dallo snapshot giornaliero</Badge>}
+                    {s.config.snapshot_only && <Badge tone="brand">solo snapshot giornaliero</Badge>}
                   </div>
                   <a href={s.url} target="_blank" rel="noopener noreferrer" className="block truncate text-xs text-brand-700 hover:underline dark:text-brand-300">{s.url}</a>
                   <p className="mt-1 text-xs muted">
@@ -320,9 +327,11 @@ export default function Sources() {
                   {result[s.id] && <p className="mt-1 text-xs font-medium text-brand-700 dark:text-brand-300">{result[s.id]}</p>}
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <button className="btn-ghost h-9 w-9 !p-0" title="Controlla ora" onClick={() => run(s)} disabled={running === s.id}>
-                    {running === s.id ? <Spinner className="h-4 w-4" /> : <Icon name="refresh" className="h-4 w-4" />}
-                  </button>
+                  {!s.config.snapshot_only && (
+                    <button className="btn-ghost h-9 w-9 !p-0" title="Controlla ora" onClick={() => run(s)} disabled={running === s.id}>
+                      {running === s.id ? <Spinner className="h-4 w-4" /> : <Icon name="refresh" className="h-4 w-4" />}
+                    </button>
+                  )}
                   <button className="btn-ghost h-9 w-9 !p-0" title={s.enabled ? "Disattiva" : "Attiva"} onClick={() => toggle(s)}>
                     <Icon name={s.enabled ? "eye" : "eyeOff"} className="h-4 w-4" />
                   </button>

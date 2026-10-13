@@ -282,6 +282,10 @@ async def run_source(source_id: int, client: httpx.AsyncClient | None = None,
             src = db.get(Source, source_id)
             if src is None:
                 return RunResult(ok=False, error="Fonte inesistente")
+            if (src.config or {}).get("snapshot_only"):
+                # Switched off in the admin panel (exam_snapshot.SNAPSHOT_ONLY): not a failure
+                return RunResult(ok=False, error="Controllo diretto dal server disattivato: "
+                                                 "la fonte si aggiorna con lo snapshot giornaliero")
             baseline = not src.baseline_done
             prev_items = {
                 i.url: i for i in db.scalars(select(Item).where(Item.source_id == src.id))

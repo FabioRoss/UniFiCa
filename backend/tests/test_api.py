@@ -202,3 +202,40 @@ def test_user_change_logs_out_sessions(client, monkeypatch):
     assert _login(client).status_code == 200
     monkeypatch.setattr(settings, "admin_user", "altra@example.com")
     assert client.get("/api/admin/me").status_code == 401
+
+
+def test_direct_esse3_checks_can_be_switched_off(client, monkeypatch):
+    # The daily snapshot keeps feeding the source; the server never calls ESSE3 itself
+    import asyncio
+
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.models import Alert, Source
+    from app.scraper import engine
+
+    assert _login(client).status_code == 200
+    db = SessionLocal()
+    src = db.scalar(select(Source).where(Source.slug == "medicina-appelli"))
+    src.last_error, src.consecutive_failures = "HTTP 403", 4
+    db.add(Alert(source_id=src.id, message="403"))
+    db.commit()
+    body = client.get("/api/admin/sources").json()
+    row = next(s for s in body if s["slug"] == "medicina-appelli")
+    row["config"]["snapshot_only"] = True
+    payload = {k: row[k] for k in ("name", "slug", "category", "kind", "parser", "url", "archive_url", "config",
+                                    "interval_minutes", "enabled", "track_attachments", "position")}
+    out = client.put(f"/api/admin/sources/{row['id']}", json=payload, headers=H).json()
+    assert out["config"]["snapshot_only"] is True and out["enabled"]
+    assert out["last_error"] is None and out["consecutive_failures"] == 0  # the old 403 is gone
+
+    async def boom(*a, **k):
+        raise AssertionError("ESSE3 must not be contacted")
+
+    monkeypatch.setattr(engine, "_snapshots", boom)
+    res = asyncio.run(engine.run_source(row["id"]))  # "check now" and `cli run`
+    assert not res.ok and "disattivato" in res.error
+    db.expire_all()
+    assert db.get(Source, row["id"]).consecutive_failures == 0
+    assert not db.scalars(select(Alert).where(Alert.resolved.is_(False))).all()
+    db.close()

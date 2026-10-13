@@ -19,7 +19,10 @@ from .scraper.engine import apply_snapshot
 from .scraper.parsers import Snapshot
 
 FORMAT = 1
-# Source.config flag: this source is fed by snapshots, the scheduler skips it
+# Source.config flag, the admin switch "Controllo diretto dal server" inverted:
+# True = the server never reads ESSE3 itself for this source (scheduler,
+# "check now" and `cli run` all skip it); data comes only from snapshots.
+# The first sync sets it when absent; after that only the admin changes it.
 SNAPSHOT_ONLY = "snapshot_only"
 
 
@@ -132,7 +135,8 @@ def import_(db: Session, data: dict[str, Any], slug: str | None = None,
         src.consecutive_failures = 0
         for a in db.scalars(select(Alert).where(Alert.source_id == src.id, Alert.resolved.is_(False))):
             a.resolved = True
-        src.config = {**(src.config or {}), SNAPSHOT_ONLY: True}
+        if SNAPSHOT_ONLY not in (src.config or {}):
+            src.config = {**(src.config or {}), SNAPSHOT_ONLY: True}
     db.commit()
     settings_store.put(db, snapshot_key(src.id), data["fetched_at"])
     result["version_ids"] = [v.id for v in versions if not v.baseline]
@@ -144,7 +148,7 @@ def set_direct(db: Session, slug: str) -> None:
     src = db.scalar(select(Source).where(Source.slug == slug))
     if src is None:
         raise SystemExit(f"Fonte '{slug}' inesistente")
-    src.config = {k: v for k, v in (src.config or {}).items() if k != SNAPSHOT_ONLY}
+    src.config = {**(src.config or {}), SNAPSHOT_ONLY: False}
     db.commit()
 
 

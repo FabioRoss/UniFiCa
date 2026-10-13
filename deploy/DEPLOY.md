@@ -174,19 +174,24 @@ docker debian`, then log in again) and `git fetch` without a password (the same
 deploy key or token used for `git pull`).
 
 From then on each import behaves like a real check: new sessions and moved
-dates are notified, the Appelli page shows when the board was read, and the
-server stops trying ESSE3 itself for that source. To refresh immediately, open
-the repo's Actions tab, pick `esse3-snapshot`, "Run workflow". If ESSE3 ever
-works from the server again: `docker compose exec openunifi-app python -m
-app.cli exams-direct` and remove the cron line.
+dates are notified and the Appelli page shows when the board was read. To
+refresh immediately, open the repo's Actions tab, pick `esse3-snapshot`,
+"Run workflow".
 
-Switching the source off in the admin panel pauses it everywhere: the
-Action and the cron job keep running, but the import ignores the snapshot
-(log: "Fonte disattivata"), so nothing is stored or notified and the
-Appelli page is hidden. Switch it back on and the next hourly sync catches
-up with the latest snapshot, notifying what changed in the meantime. To stop
-the GitHub side too, disable the workflow in the Actions tab ("..." →
-"Disable workflow").
+Two separate switches on the source (admin panel, Fonti, edit):
+
+- **Controllo diretto dal server**: the server reading ESSE3 by itself.
+  Keep it off while ESSE3 answers 403 to the server: nothing on the server
+  contacts ESSE3 any more (scheduler, "Controlla ora", `app.cli run`), and the
+  daily snapshot keeps the exams up to date. The first sync switches it off
+  for you; after that only you change it. Turning it off also clears the old
+  403 error and its alerts. If ESSE3 works from the server again, turn it
+  back on (or `python -m app.cli exams-direct`) and remove the cron line.
+- **Attiva**: the whole source. Off hides the Appelli page and pauses
+  everything, the snapshot import included (log: "Fonte disattivata"); the
+  Action and the cron job keep running harmlessly. Back on, the next hourly
+  sync catches up. To stop the GitHub side too, disable the workflow in the
+  Actions tab ("..." then "Disable workflow").
 
 A one-off file can still be loaded by hand (never notifies):
 `python -m app.cli import-exams FILE` (inside the container), and made where

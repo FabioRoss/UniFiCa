@@ -116,4 +116,10 @@ def test_daily_sync_notifies_changes_and_skips_old(tmp_path, monkeypatch):
 
     exam_snapshot.set_direct(db, "medicina-appelli")
     db.refresh(src)
-    assert "snapshot_only" not in src.config
+    assert src.config["snapshot_only"] is False
+    # The admin's choice sticks: later syncs no longer switch direct checks off
+    newer = copy.deepcopy(later)
+    newer["fetched_at"] = "2026-10-16T05:00:00Z"
+    exam_snapshot.import_(db, newer, sync=True)
+    db.refresh(src)
+    assert src.config["snapshot_only"] is False
