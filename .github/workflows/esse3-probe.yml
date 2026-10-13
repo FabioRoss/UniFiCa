@@ -1,0 +1,21 @@
+# Temporary: can a GitHub-hosted runner read the ESSE3 exam board, or does
+# Cloudflare challenge it like the VPS? Removed once answered.
+name: esse3-probe
+on:
+  push:
+    branches: [claude/eloquent-mendel-ey5rrj]
+    paths: [.github/workflows/esse3-probe.yml]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request the board
+        run: |
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36 OpenUnifi/1.0"
+          echo "runner IP: $(curl -s https://api.ipify.org)"
+          for i in 1 2 3; do
+            code=$(curl -s -A "$UA" -o page.html -w "%{http_code}" https://studenti.unifi.it/ListaAppelliOfferta.do)
+            title=$(grep -o '<title>[^<]*' page.html | head -1)
+            echo "attempt $i: HTTP $code $title"
+            sleep 5
+          done
