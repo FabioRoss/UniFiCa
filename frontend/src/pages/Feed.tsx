@@ -46,6 +46,7 @@ export function FeedCard({ e, query = "" }: { e: FeedEntry; query?: string }) {
       {(e.item.attachments > 0 || e.item.published_on) && (
         <div className="mt-3 flex items-center gap-3 text-xs muted">
           {e.item.published_on && e.item.source.kind === "news" && <span>Pubblicato il {fmtDate(e.item.published_on)}</span>}
+          {e.item.published_on && e.item.source.kind === "page" && <span>Aggiornata sul sito il {fmtDate(e.item.published_on)}</span>}
           {e.item.attachments > 0 && (
             <span className="inline-flex items-center gap-1"><Icon name="file" className="h-3.5 w-3.5" />{e.item.attachments} allegat{e.item.attachments === 1 ? "o" : "i"}</span>
           )}

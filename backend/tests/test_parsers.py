@@ -69,3 +69,8 @@ def test_esse3_table():
     assert r.meta["time"] == "08:30" and r.meta["reg_from"] == "2026-10-15"
     assert r.published_on == dt.date(2026, 11, 5)
     assert "#Iscr" not in r.content_text and "\n0" not in r.content_text  # live count not tracked
+
+
+def test_page_monitor_reads_site_update_date():
+    snap = parse_content(fixture("page_lauree.html"), BASE + "vp-114.html", selectors("page", {}))
+    assert snap.published_on == dt.date(2026, 10, 6)

@@ -207,11 +207,17 @@ def parse_content(html: str, url: str, cfg: dict[str, str]) -> Snapshot:
     date_node = None
     if node is not None:
         date_node = node.select_one(".right-text")
+    published = parse_date(_text(date_node)) if date_node is not None else None
+    if published is None:
+        # Pages of the unifi CMS end with "ULTIMO AGGIORNAMENTO dd.mm.yyyy",
+        # outside the content area (so it never counts as a change)
+        upd = _first(doc, ".update-at")
+        published = parse_date(_text(upd)) if upd is not None else None
     return Snapshot(
         url=url,
         title=title,
         content_text=text,
-        published_on=parse_date(_text(date_node)) if date_node is not None else None,
+        published_on=published,
         attachment_links=attachments,
         links=links,
     )

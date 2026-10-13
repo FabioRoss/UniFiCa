@@ -228,7 +228,12 @@ def apply_snapshot(db: Session, src: Source, snap: Snapshot, atts: list[dict[str
         prev.meta = snap.meta
     if snap.summary:
         prev.summary = snap.summary
-    if snap.published_on and not prev.published_on:
+    if snap.published_on and (src.kind == "page" or not prev.published_on):
+        # Pages: the site's own "last updated" date, kept current
+        if not prev.published_on and prev.version_count == 1 and prev.versions and prev.versions[0].baseline:
+            # Recorded before we read that date: move it from "first seen" to its real place in the feed
+            prev.versions[0].created_at = min(prev.versions[0].created_at, _date_to_dt(snap.published_on))
+            prev.changed_at = prev.versions[0].created_at
         prev.published_on = snap.published_on
     old_cmp = content_hash(prev.title, prev.content_text, _comparable_prev(prev.attachments, atts))
     if new_hash == prev.content_hash or new_hash == old_cmp:

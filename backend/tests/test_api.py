@@ -66,6 +66,24 @@ def test_public_endpoints(client):
     assert client.get("/api/exams").json()["exams"] == []
 
 
+def test_watched_pages_are_in_the_feed(client):
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.models import Source
+    from app.scraper.engine import apply_snapshot
+    from app.scraper.parsers import Snapshot
+
+    db = SessionLocal()
+    src = db.scalar(select(Source).where(Source.slug == "medicina-orario-lezioni"))
+    apply_snapshot(db, src, Snapshot(url=src.url, title="Orario delle lezioni", content_text="x"), [], None,
+                   baseline=True)
+    db.commit()
+    entries = client.get("/api/feed", params={"source": src.id}).json()["entries"]
+    assert [e["item"]["title"] for e in entries] == ["Orario delle lezioni"]
+    db.close()
+
+
 def test_push_subscription_lifecycle(client):
     sub = {"endpoint": "https://fcm.googleapis.com/fcm/send/abc", "keys": {"p256dh": "k", "auth": "a"}}
     r = client.post("/api/subscription/push", json={"subscription": sub, "platform": "ios"}).json()

@@ -52,3 +52,19 @@ def test_exam_change_summary():
     a = {"title": "X", "content_text": "Insegnamento: X\nData: 05/11/2026 ore 08:30", "attachments": []}
     b = {"title": "X", "content_text": "Insegnamento: X\nData: 07/11/2026 ore 08:30", "attachments": []}
     assert change_summary(a, b) == "Data: 05/11/2026 ore 08:30 → 07/11/2026 ore 08:30"
+
+
+def test_page_baseline_moves_to_site_date(db):
+    import datetime as dt
+
+    src = Source(slug="p", name="Pagina", kind="page", parser="page", url="https://x/p")
+    db.add(src)
+    db.commit()
+    v = apply_snapshot(db, src, Snapshot(url="https://x/p", title="Orario", content_text="a"), [], None, baseline=True)
+    db.commit()
+    assert v.item.published_on is None  # recorded before the date was read
+    same = Snapshot(url="https://x/p", title="Orario", content_text="a", published_on=dt.date(2026, 10, 5))
+    assert apply_snapshot(db, src, same, [], v.item, baseline=False) is None  # not a change
+    db.commit()
+    assert v.item.published_on == dt.date(2026, 10, 5)
+    assert v.created_at.date() == dt.date(2026, 10, 5)

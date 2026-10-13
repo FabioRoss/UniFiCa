@@ -74,9 +74,10 @@ def feed(
         .join(Item, Version.item_id == Item.id)
         .join(Source, Item.source_id == Source.id)
         .where(Item.hidden.is_(False))
-        # First-run snapshots of watched pages and exam sessions are not news:
-        # the feed shows them only once something actually changes.
-        .where(~(Version.baseline.is_(True) & Source.kind.in_(("page", "exams"))))
+        # Exam sessions have their own tab: their first-run snapshots stay out
+        # of the feed (only real changes appear). Watched pages are shown from
+        # the start, dated by the site's own "last updated" date.
+        .where(~(Version.baseline.is_(True) & (Source.kind == "exams")))
     )
     if source:
         stmt = stmt.where(Source.id == source)

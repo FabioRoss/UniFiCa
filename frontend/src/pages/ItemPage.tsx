@@ -89,7 +89,7 @@ export default function ItemPage() {
         </div>
         <h1 className="text-[24px] font-bold leading-tight tracking-tight sm:text-[28px]">{item.source.kind === "exams" ? titleCase(item.title) : item.title}</h1>
         <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px] muted">
-          {item.published_on && <div><dt className="inline">Data: </dt><dd className="inline font-medium">{fmtDate(item.published_on)}</dd></div>}
+          {item.published_on && <div><dt className="inline">{item.source.kind === "page" ? "Aggiornata sul sito il: " : "Data: "}</dt><dd className="inline font-medium">{fmtDate(item.published_on)}</dd></div>}
           <div><dt className="inline">Ultima modifica rilevata: </dt><dd className="inline font-medium">{fmtDateTime(item.changed_at)}</dd></div>
           <div><dt className="inline">Controllato: </dt><dd className="inline font-medium">{relTime(item.checked_at)}</dd></div>
         </dl>
