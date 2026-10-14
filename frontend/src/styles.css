@@ -31,6 +31,17 @@
 }
 
 html, body, #root { min-height: 100%; }
+
+/* Tailwind v4 gives buttons the default arrow: everything clickable gets the hand */
+@layer base {
+  button:not(:disabled), [role="button"], summary, select:not(:disabled),
+  label:has(> input[type="checkbox"]:not(:disabled)), label:has(input.peer:not(:disabled)),
+  input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled), input[type="file"]::file-selector-button {
+    cursor: pointer;
+  }
+  button:disabled, select:disabled, input:disabled { cursor: not-allowed; }
+}
 body {
   margin: 0;
   background: #f5f8ff;
