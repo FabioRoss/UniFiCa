@@ -12,7 +12,8 @@ run_sync() (
     set -e
     git fetch -q origin esse3-data
     git show origin/esse3-data:esse3-medicina.json > /tmp/openunifi-esse3.json
-    docker compose cp /tmp/openunifi-esse3.json openunifi-app:/tmp/esse3.json
+    # Its "Copying/Copied" lines only matter when the copy fails
+    out=$(docker compose cp /tmp/openunifi-esse3.json openunifi-app:/tmp/esse3.json 2>&1) || { echo "$out"; exit 1; }
     docker compose exec -T openunifi-app python -m app.cli import-exams /tmp/esse3.json --sync
 )
 

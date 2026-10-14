@@ -173,12 +173,9 @@ be able to run `docker` without sudo (`sudo usermod -aG
 docker debian`, then log in again) and `git fetch` without a password (the same
 deploy key or token used for `git pull`).
 
-Checking the runs: every line of the log starts with date and time.
-
-```sh
-tail -n 30 /home/debian/esse3-sync.log           # "già importato" most hours, "Importati: ..." once a day
-journalctl -u cron --since yesterday | grep esse3  # did cron start it? (Debian has no /var/log/syslog)
-```
+Checking the runs: `tail -n 30 /home/debian/esse3-sync.log`. One line per
+hour, each starting with date and time: "già importato" most hours,
+"Importati: ..." once a day after the GitHub snapshot, "ERRORE" if a run failed.
 
 From then on each import behaves like a real check: new sessions and moved
 dates are notified and the Appelli page shows when the board was read. To
