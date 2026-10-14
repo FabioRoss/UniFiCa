@@ -59,24 +59,21 @@ def announcement_message(a: Announcement) -> dict[str, Any]:
             "summary": a.body, "original": a.url}
 
 
-def telegram_text(m: dict[str, Any]) -> str:
-    e = telegram.esc
-    base = settings.base_url
+def telegram_text(m: dict[str, Any]) -> telegram.Msg:
+    e, btn = telegram.esc, telegram.url_button
     if m["kind"] == "announcement":
-        text = f"📣 <b>{e(m['item_title'])}</b>\n\n{e(m['summary'])}"
-        if m.get("original"):
-            link = m["original"] if m["original"].startswith("http") else base + m["original"]
-            text += f"\n\n<a href=\"{e(link)}\">Apri</a>"
-        return text
+        text = f"📣 <b>{e(m['item_title'])}</b>"
+        if m.get("summary"):
+            text += f"\n\n{e(m['summary'])}"
+        return text, telegram.keyboard([btn("🔗 Apri", m.get("original"))])
     head = "🆕 <b>Nuovo</b>" if m["kind"] == "new" else "✏️ <b>Modificato</b>"
     text = f"{head} · <i>{e(m['source'])}</i>\n<b>{e(m['item_title'])}</b>"
     if m["kind"] == "modified" and m.get("change"):
         text += f"\n{e(m['change'])}"
     elif m.get("summary"):
         text += f"\n{e(m['summary'][:400])}"
-    text += (f"\n\n<a href=\"{base}{m['url']}\">Dettagli e modifiche</a>"
-             f" | <a href=\"{e(m['original'])}\">Sito ufficiale</a>")
-    return text
+    details = "✏️ Vedi le modifiche" if m["kind"] == "modified" else "📄 Apri su Open Unifi"
+    return text, telegram.keyboard([btn(details, m["url"]), btn("🌐 Sito ufficiale", m.get("original"))])
 
 
 def digest_message(msgs: list[dict[str, Any]]) -> dict[str, Any]:
@@ -88,16 +85,13 @@ def digest_message(msgs: list[dict[str, Any]]) -> dict[str, Any]:
             "url": "/", "tag": "digest", "kind": "digest", "items": msgs}
 
 
-def telegram_digest(msgs: list[dict[str, Any]]) -> str:
-    e = telegram.esc
-    base = settings.base_url
-    lines = [f"🗞 <b>Riepilogo Open Unifi</b> ({len(msgs)})\n"]
-    for m in msgs[:40]:
-        icon = {"new": "🆕", "modified": "✏️"}.get(m["kind"], "📣")
-        link = m["url"] if m["url"].startswith("http") else base + m["url"]
-        lines.append(f"{icon} <a href=\"{e(link)}\">{e(m['item_title'])}</a>"
-                     + (f" <i>({e(m['source'])})</i>" if m.get("source") else ""))
-    return "\n".join(lines)
+def telegram_digest(msgs: list[dict[str, Any]]) -> telegram.Msg:
+    head = f"🗞 <b>Riepilogo Open Unifi</b> ({len(msgs)})"
+    if len(msgs) > 40:
+        head += "\n<i>I primi 40, gli altri su Open Unifi</i>"
+    entries = [({"new": "🆕", "modified": "✏️"}.get(m["kind"], "📣"), m["item_title"], m.get("source") or "", m["url"])
+               for m in msgs]
+    return telegram.listing(head, entries, ("🗞 Tutte le novità", "/"))
 
 
 # ── Sending ──────────────────────────────────────────────────────────────
@@ -122,13 +116,14 @@ class Sender:
         if self.tg:
             await self.tg.aclose()
 
-    async def _one(self, sub: Subscriber, push_payload: dict[str, Any], tg_text: str,
+    async def _one(self, sub: Subscriber, push_payload: dict[str, Any], tg: str | telegram.Msg,
                    urgency: str = "normal") -> str:
         if sub.channel == "push":
             async with self.sem:
                 res = await webpush.send(sub.endpoint, sub.keys, push_payload, self.vapid, urgency)
         elif sub.channel == "telegram" and self.tg is not None:
-            res = await telegram.send(self.tg, sub.endpoint, tg_text)
+            text, buttons = (tg, None) if isinstance(tg, str) else tg
+            res = await telegram.send(self.tg, sub.endpoint, text, buttons)
             await asyncio.sleep(TELEGRAM_DELAY)
         else:
             return "skip"
@@ -144,7 +139,7 @@ class Sender:
                 sub.active = False
         return res
 
-    async def send_many(self, items: list[tuple[Subscriber, dict[str, Any], str]],
+    async def send_many(self, items: list[tuple[Subscriber, dict[str, Any], str | telegram.Msg]],
                         urgency: str = "normal") -> list[str]:
         """Results aligned with `items`."""
         results: list[str] = ["skip"] * len(items)
@@ -195,7 +190,7 @@ async def dispatch_versions(version_ids: list[int]) -> None:
                 else:
                     per_sub[sub.id].append(v)
 
-        batch: list[tuple[Subscriber, dict[str, Any], str]] = []
+        batch: list[tuple[Subscriber, dict[str, Any], telegram.Msg]] = []
         covered: list[list[Version]] = []
         by_id = {s.id: s for s in subs}
         for sub_id, vs in per_sub.items():
@@ -222,10 +217,10 @@ async def dispatch_versions(version_ids: list[int]) -> None:
             if sender.tg is not None and settings.telegram_channel:
                 all_msgs = [msgs[v.id] for v, _, _ in rows]
                 if len(all_msgs) > GROUP_THRESHOLD:
-                    await telegram.send(sender.tg, settings.telegram_channel, telegram_digest(all_msgs))
+                    await telegram.send(sender.tg, settings.telegram_channel, *telegram_digest(all_msgs))
                 else:
                     for m in all_msgs:
-                        await telegram.send(sender.tg, settings.telegram_channel, telegram_text(m))
+                        await telegram.send(sender.tg, settings.telegram_channel, *telegram_text(m))
         for v, _, _ in rows:
             v.dispatched = True
         db.commit()
@@ -252,7 +247,7 @@ async def broadcast(announcement_id: int) -> dict[str, int]:
         async with Sender(db) as sender:
             await sender.send_many(batch, "high")
             if sender.tg is not None and settings.telegram_channel:
-                await telegram.send(sender.tg, settings.telegram_channel, telegram_text(msg))
+                await telegram.send(sender.tg, settings.telegram_channel, *telegram_text(msg))
             a.push_sent += sender.counts["push"]
             a.telegram_sent += sender.counts["telegram"]
         db.commit()
@@ -324,7 +319,8 @@ async def notify_admins(text: str, url: str = "/admin") -> None:
             return
         payload = {"title": "Open Unifi admin", "body": text[:300], "url": url, "tag": "admin"}
         async with Sender(db) as sender:
-            await sender.send_many([(s, payload, telegram.esc(text)) for s in admins], "high")
+            tg = (telegram.esc(text), telegram.keyboard([telegram.url_button("🔐 Apri il pannello", url)]))
+            await sender.send_many([(s, payload, tg) for s in admins], "high")
         db.commit()
     finally:
         db.close()

@@ -11,6 +11,7 @@ import html
 import logging
 import secrets
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from sqlalchemy import select
@@ -34,6 +35,54 @@ def enabled() -> bool:
 
 def esc(s: str) -> str:
     return html.escape(s or "", quote=False)
+
+
+# ── Inline buttons ───────────────────────────────────────────────────────
+# Links go in buttons under the message, not in the text.
+
+Button = dict[str, str]
+Keyboard = list[list[Button]]
+Msg = tuple[str, Keyboard | None]  # text (HTML) and its buttons
+
+
+def url_button(label: str, url: str | None) -> Button | None:
+    """A link button, or None when Telegram would refuse the URL (it rejects
+    non-public hosts such as localhost, which would fail the whole message)."""
+    if not url:
+        return None
+    if url.startswith("/"):
+        url = settings.base_url + url
+    host = urlparse(url).hostname or ""
+    if urlparse(url).scheme not in ("http", "https") or "." not in host or host.endswith(".localhost"):
+        return None
+    return {"text": label, "url": url}
+
+
+def keyboard(*rows: list[Button | None]) -> Keyboard | None:
+    out = [[b for b in row if b] for row in rows]
+    return [r for r in out if r] or None
+
+
+def short(s: str, n: int = 40) -> str:
+    s = " ".join((s or "").split())
+    return s if len(s) <= n else s[: n - 1].rstrip() + "…"
+
+
+def listing(head: str, entries: list[tuple[str, str, str, str]], more: tuple[str, str] | None = None) -> Msg:
+    """A numbered list of (icon, title, source, url) with a button per entry:
+    full titles when few, a compact grid of numbers when many."""
+    entries = entries[:40]
+    lines = [head, ""]
+    for n, (icon, title, source, _) in enumerate(entries, 1):
+        lines.append(f"{n}. {icon} {esc(title)}" + (f" <i>({esc(source)})</i>" if source else ""))
+    if len(entries) <= 8:
+        rows = [[url_button(f"{n}. {short(title)}", url)] for n, (_, title, _, url) in enumerate(entries, 1)]
+    else:
+        nums = [url_button(str(n), url) for n, (*_, url) in enumerate(entries, 1)]
+        rows = [nums[i:i + 5] for i in range(0, len(nums), 5)]
+    if more:
+        rows.append([url_button(*more)])
+    return "\n".join(lines), keyboard(*rows)
 
 
 async def call(client: httpx.AsyncClient, method: str, **params: Any) -> dict[str, Any]:
@@ -187,7 +236,7 @@ async def handle_message(client: httpx.AsyncClient, msg: dict[str, Any]) -> None
                 ("Benvenuto su <b>Open Unifi</b>! 🎓\n\n" if created else "Notifiche riattivate ✅\n\n")
                 + "Riceverai un messaggio per ogni nuova pubblicazione o modifica sui siti monitorati.\n"
                 "Puoi scegliere fonti e parole chiave dal pulsante qui sotto.\n\n" + HELP,
-                [[{"text": "⚙️ Impostazioni", "url": _prefs_link(sub.token)}]],
+                keyboard([url_button("⚙️ Impostazioni", _prefs_link(sub.token)), url_button("🗞 Novità", "/")]),
             )
             if arg.startswith("admin_"):
                 await _try_admin(client, db, sub, arg.removeprefix("admin_"))
@@ -208,9 +257,10 @@ async def handle_message(client: httpx.AsyncClient, msg: dict[str, Any]) -> None
             await send(client, chat_id, "Notifiche in pausa. Scrivi /start per riattivarle.")
         elif cmd in ("/impostazioni", "/settings", "/fonti"):
             await send(client, chat_id, "Gestisci le tue preferenze da qui (link personale, non condividerlo):",
-                       [[{"text": "⚙️ Apri impostazioni", "url": _prefs_link(sub.token)}]])
+                       keyboard([url_button("⚙️ Apri impostazioni", _prefs_link(sub.token))]))
         elif cmd == "/stato":
-            await send(client, chat_id, _status_text(db, sub))
+            await send(client, chat_id, _status_text(db, sub),
+                       keyboard([url_button("⚙️ Modifica impostazioni", _prefs_link(sub.token))]))
         elif cmd == "/ultime":
             rows = db.execute(
                 select(Version, Item, Source).join(Item, Version.item_id == Item.id)
@@ -221,16 +271,16 @@ async def handle_message(client: httpx.AsyncClient, msg: dict[str, Any]) -> None
             if not rows:
                 await send(client, chat_id, "Ancora nessun aggiornamento.")
             else:
-                lines = [
-                    f"{'🆕' if v.kind == 'new' else '✏️'} <a href=\"{settings.base_url}/n/{i.id}?v={v.number}\">"
-                    f"{esc(i.title)}</a> <i>({esc(s.name)})</i>"
-                    for v, i, s in rows
-                ]
-                await send(client, chat_id, "<b>Ultimi aggiornamenti</b>\n\n" + "\n".join(lines))
+                text, buttons = listing(
+                    "<b>Ultimi aggiornamenti</b>",
+                    [("🆕" if v.kind == "new" else "✏️", i.title, s.name, f"/n/{i.id}?v={v.number}") for v, i, s in rows],
+                    ("🗞 Tutte le novità", "/"),
+                )
+                await send(client, chat_id, text, buttons)
         elif cmd == "/admin":
             await _try_admin(client, db, sub, arg.strip())
         else:
-            await send(client, chat_id, HELP)
+            await send(client, chat_id, HELP, keyboard([url_button("🌐 Apri Open Unifi", "/")]))
     finally:
         db.close()
 
@@ -250,7 +300,8 @@ async def _try_admin(client: httpx.AsyncClient, db, sub: Subscriber, code: str) 
     sub.is_admin = True
     db.commit()
     settings_store.put(db, "admin_link_code", {})
-    await send(client, sub.endpoint, "🔐 Questa chat ora riceve gli avvisi di amministrazione.")
+    await send(client, sub.endpoint, "🔐 Questa chat ora riceve gli avvisi di amministrazione.",
+               keyboard([url_button("🔐 Apri il pannello", "/admin")]))
 
 
 async def poll_forever() -> None:
