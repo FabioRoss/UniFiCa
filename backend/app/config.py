@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     # Public channel the bot also posts every update to, e.g. @openunifi_news (optional).
     telegram_channel: str = ""
 
+    # Search engine ownership checks (optional): the content of the
+    # google-site-verification / msvalidate.01 meta tags from Search Console
+    # and Bing Webmaster Tools. Not needed if you verify the domain by DNS.
+    google_site_verification: str = ""
+    bing_site_verification: str = ""
+
     # Scraper behaviour
     scheduler_enabled: bool = True
     user_agent: str = (

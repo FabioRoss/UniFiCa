@@ -23,8 +23,7 @@ self.addEventListener("fetch", (event) => {
     // Network first; offline falls back to the cached shell
     event.respondWith(
       fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(SHELL).then((c) => c.put("/", copy));
+        if (res.ok) { const copy = res.clone(); caches.open(SHELL).then((c) => c.put("/", copy)); }
         return res;
       }).catch(() => caches.match("/"))
     );

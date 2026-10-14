@@ -6,6 +6,7 @@ import { Badge, Empty, ErrorBox, Highlight, Loading, SearchBox, Spinner, useDebo
 import { useConfig } from "../lib/app";
 import { fmtDate, parseDate, relTime, titleCase } from "../lib/format";
 import { getToken, pushState } from "../lib/push";
+import { usePageMeta } from "../lib/meta";
 import { useFetch } from "../lib/useFetch";
 
 type Kind = "" | "new" | "modified";
@@ -105,6 +106,7 @@ function Announcements() {
 
 export default function Feed() {
   const cfg = useConfig();
+  usePageMeta("Open Unifi: avvisi, modifiche e appelli di UniFI", cfg?.site.intro);
   const [params, setParams] = useSearchParams();
   const [q, setQ] = useState(params.get("q") ?? "");
   const kind = (params.get("tipo") ?? "") as Kind;

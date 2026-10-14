@@ -7,9 +7,9 @@ from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, Response
 
-from . import scheduler, settings_store
+from . import og, scheduler, seo, settings_store
 from .config import settings
 from .db import SessionLocal, init_engine
 from .notify import telegram
@@ -81,13 +81,49 @@ def api_404(rest: str) -> JSONResponse:
     return JSONResponse({"detail": "Not found"}, status_code=404)
 
 
+# ── Search engines and link previews (seo.py, og.py) ─────────────────────
+
+@app.get("/robots.txt", include_in_schema=False)
+def robots() -> PlainTextResponse:
+    return PlainTextResponse(seo.robots(), headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+def sitemap() -> Response:
+    with SessionLocal() as db:
+        xml = seo.sitemap(db)
+    return Response(xml, media_type="application/xml", headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/og/{key}.png", include_in_schema=False)
+def og_image(key: str) -> FileResponse:
+    # Sync on purpose: FastAPI runs it in a thread, drawing takes a moment
+    with SessionLocal() as db:
+        card = seo.card_for(db, key)
+    if card is None:
+        raise HTTPException(404)
+    # The URL carries ?v=<content hash>, so the image can be cached for long
+    return FileResponse(og.cached(key, *card), media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=604800"})
+
+
 # ── PWA ──────────────────────────────────────────────────────────────────
 
 NO_CACHE = {"Cache-Control": "no-cache"}
+_index: tuple[float, str] | None = None
+
+
+def _index_html() -> str:
+    global _index
+    path = DIST / "index.html"
+    mtime = path.stat().st_mtime
+    if _index is None or _index[0] != mtime:
+        _index = (mtime, path.read_text(encoding="utf-8"))
+    return _index[1]
 
 
 @app.get("/{path:path}", include_in_schema=False)
-def spa(path: str) -> Response:
+def spa(path: str, request: Request) -> Response:
     if not DIST.exists():
         raise HTTPException(503, "Frontend non compilato (npm run build)")
     target = (DIST / path).resolve()
@@ -104,4 +140,8 @@ def spa(path: str) -> Response:
         if path.endswith(".webmanifest"):
             return FileResponse(target, media_type="application/manifest+json", headers=NO_CACHE)
         return FileResponse(target, headers={"Cache-Control": "public, max-age=3600"})
-    return FileResponse(DIST / "index.html", headers=NO_CACHE)
+    # App routes: index.html with this page's title, description, preview
+    # image and a plain HTML version of its content (seo.py)
+    with SessionLocal() as db:
+        page = seo.page_for(db, path, dict(request.query_params))
+    return HTMLResponse(seo.inject(_index_html(), page), status_code=page.status, headers=NO_CACHE)

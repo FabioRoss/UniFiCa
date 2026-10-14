@@ -3,6 +3,7 @@ import { Icon } from "../components/Icon";
 import { PageTitle } from "../components/ui";
 import { useConfig } from "../lib/app";
 import { relTime } from "../lib/format";
+import { usePageMeta } from "../lib/meta";
 import { useFetch } from "../lib/useFetch";
 
 const KIND = { news: "Notizie", page: "Pagina monitorata", exams: "Appelli ESSE3" } as const;
@@ -15,6 +16,7 @@ function every(min: number): string {
 
 export default function Info() {
   const cfg = useConfig();
+  usePageMeta("Come funziona", cfg?.site.intro);
   const { data: sources } = useFetch<SourceInfo[]>("/api/sources");
   return (
     <div className="mx-auto max-w-3xl space-y-5">

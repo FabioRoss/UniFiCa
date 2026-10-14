@@ -4,6 +4,7 @@ import type { Exam, SourceInfo } from "../api";
 import { Icon } from "../components/Icon";
 import { Badge, Empty, ErrorBox, Highlight, Loading, PageTitle, SearchBox } from "../components/ui";
 import { daysUntil, fmtDate, fmtDateTime, fmtDay, matchesQuery, nameCase, relTime, titleCase } from "../lib/format";
+import { usePageMeta } from "../lib/meta";
 import { useFetch } from "../lib/useFetch";
 
 type Filter = "all" | "open" | "soon";
@@ -26,6 +27,7 @@ export default function Exams() {
   const { data, error, loading, reload } = useFetch<{ exams: Exam[]; sources: (SourceInfo & { snapshot_at: string | null })[] }>("/api/exams");
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  usePageMeta("Appelli d'esame", "Calendario degli appelli d'esame dalla bacheca pubblica ESSE3: date, orari, iscrizioni e docenti.");
 
   const list = useMemo(() => {
     let xs = data?.exams ?? [];

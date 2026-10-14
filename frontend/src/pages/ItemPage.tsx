@@ -1,10 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { ItemDetail, VersionDiff } from "../api";
 import DiffView from "../components/DiffView";
 import { Icon } from "../components/Icon";
 import { Badge, ErrorBox, Loading } from "../components/ui";
 import { fileSize, fmtDate, fmtDateTime, relTime, titleCase } from "../lib/format";
+import { usePageMeta } from "../lib/meta";
 import { useFetch } from "../lib/useFetch";
 
 const URL_RE = /(https?:\/\/[^\s)]+)/g;
@@ -65,10 +66,8 @@ export default function ItemPage() {
   const { data: diff, loading: diffLoading } = useFetch<VersionDiff>(showDiffFor ? `/api/items/${id}/versions/${showDiffFor}/diff` : null);
   const [shared, setShared] = useState(false);
 
-  useEffect(() => {
-    if (item) document.title = `${item.title} · Open Unifi`;
-    return () => { document.title = "Open Unifi"; };
-  }, [item]);
+  usePageMeta(item ? (item.source.kind === "exams" ? titleCase(item.title) : item.title) : null,
+    item ? (item.summary || item.content_text).replace(/\s+/g, " ").slice(0, 160) : null);
 
   if (loading) return <Loading />;
   if (error || !item) return <ErrorBox message={error ?? "Contenuto non trovato"} onRetry={reload} />;

@@ -124,6 +124,29 @@ Open `https://<your domain>` and `https://<your domain>/admin`.
 
 The bot uses long polling: nothing to expose, no webhook to configure.
 
+## 5. Search engines (once)
+
+Nothing to configure for the pages themselves: every page already ships its
+title, description, preview image (generated, cached in the data volume
+under `og/`), structured data and a readable version of its content, plus
+`/robots.txt` and `/sitemap.xml` (always current).
+
+To get indexed sooner, register the site once:
+
+1. **Google Search Console** (search.google.com/search-console): add a
+   *Domain* property for `openunifi.it` and verify it with the TXT record it
+   shows (register.it, DNS panel, add a TXT record on the bare domain). Then
+   Sitemaps, submit `sitemap.xml`. Prefer the *URL prefix* property? Choose
+   "HTML tag", put the content value in `OPENUNIFI_GOOGLE_SITE_VERIFICATION`
+   in `.env` and `docker compose up -d`.
+2. **Bing Webmaster Tools** (bing.com/webmasters): "Import from Google Search
+   Console" is the quickest; it also feeds DuckDuckGo and Ecosia. The meta-tag
+   option uses `OPENUNIFI_BING_SITE_VERIFICATION`.
+
+Check a preview any time by pasting a link into Telegram or WhatsApp, or with
+the Facebook Sharing Debugger (developers.facebook.com/tools/debug), which
+also refreshes a preview Facebook cached earlier.
+
 ## What runs by itself
 
 Once `docker compose up -d` is done there is nothing to schedule: the app has

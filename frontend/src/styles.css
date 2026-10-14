@@ -32,6 +32,16 @@
 
 html, body, #root { min-height: 100%; }
 
+/* Plain HTML of the page written by the server for crawlers and previews
+   (backend seo.py); React replaces it as soon as the app starts */
+.prerender { max-width: 48rem; margin: 0 auto; padding: 1rem 1rem 6rem; font-size: 15px; line-height: 1.6; }
+.prerender h1 { margin: 1.5rem 0 0.5rem; font-size: 1.75rem; font-weight: 800; line-height: 1.2; }
+.prerender h2 { margin: 1.5rem 0 0.5rem; font-size: 1.15rem; font-weight: 700; }
+.prerender h3, .prerender h4, .prerender th { font-weight: 700; }
+.prerender p, .prerender ul { margin: 0.5rem 0; }
+.prerender a { color: #1d4ed8; }
+.prerender small { color: #64748b; }
+
 /* Tailwind v4 gives buttons the default arrow: everything clickable gets the hand */
 @layer base {
   button:not(:disabled), [role="button"], summary, select:not(:disabled),

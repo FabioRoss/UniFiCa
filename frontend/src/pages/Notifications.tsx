@@ -5,6 +5,7 @@ import { Icon, TelegramIcon } from "../components/Icon";
 import { ErrorBox, Field, Loading, PageTitle, Spinner, Toggle } from "../components/ui";
 import { useConfig } from "../lib/app";
 import { getToken, platform, pushState, setToken, subscribe, unsubscribe, type PushState } from "../lib/push";
+import { usePageMeta } from "../lib/meta";
 import { useFetch } from "../lib/useFetch";
 
 function Step({ n, children }: { n: number; children: ReactNode }) {
@@ -266,6 +267,7 @@ function PrefsEditor({ sub, sources, onSaved }: { sub: Subscription; sources: So
 }
 
 export default function Notifications() {
+  usePageMeta("Notifiche", "Ricevi gratis una notifica push o un messaggio Telegram quando i siti UniFI pubblicano o modificano qualcosa.");
   const [params] = useSearchParams();
   const tgToken = params.get("t");
   const { data: sources } = useFetch<SourceInfo[]>("/api/sources");

@@ -3,6 +3,7 @@ import type { LinkGroup, LinkItem } from "../api";
 import { Icon } from "../components/Icon";
 import { Empty, ErrorBox, Highlight, Loading, PageTitle, SearchBox } from "../components/ui";
 import { matchesQuery } from "../lib/format";
+import { usePageMeta } from "../lib/meta";
 import { useFetch } from "../lib/useFetch";
 
 function host(url: string): string {
@@ -66,6 +67,7 @@ function LinkCard({ l, q }: { l: LinkItem; q: string }) {
 }
 
 export default function Links() {
+  usePageMeta("Link utili e contatti", "Link utili e contatti per gli studenti UniFI: segreterie, servizi online, orari, biblioteche, tutor e rappresentanti.");
   const { data, error, loading, reload } = useFetch<LinkGroup[]>("/api/links");
   const [q, setQ] = useState("");
 

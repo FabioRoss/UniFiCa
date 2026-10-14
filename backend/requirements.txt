@@ -12,5 +12,7 @@ pywebpush==2.0.1
 # Text of PDF attachments, so the diff view can show what changed inside them
 pypdf==5.1.0
 itsdangerous==2.2.0
+# Social preview images (og.py)
+Pillow==11.1.0
 # Europe/Rome for quiet hours and digests (slim images ship no zoneinfo)
 tzdata==2026.5
