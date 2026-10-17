@@ -283,3 +283,33 @@ def test_telegram_profile_in_admin_and_cancella(client, monkeypatch):
     assert db.scalar(select(Subscriber).where(Subscriber.endpoint == "4242")) is None
     assert "cancellati" in sent[-1][1]
     db.close()
+
+
+def test_exam_sessions_only_on_their_own_page(client):
+    import datetime as dt
+
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.models import Source
+    from app.scraper.engine import apply_snapshot
+    from app.scraper.parsers import Snapshot
+
+    news_id = _add_item()
+    db = SessionLocal()
+    src = db.scalar(select(Source).where(Source.kind == "exams"))
+    day = dt.date.today() + dt.timedelta(days=20)
+    snap = Snapshot(url="https://e/x", title="ANATOMIA I", content_text="ore 9:00", published_on=day)
+    v = apply_snapshot(db, src, snap, [], None, baseline=False)  # a real new session, not the first import
+    db.commit()
+    exam_id = v.item.id
+    snap.content_text = "ore 10:00"
+    apply_snapshot(db, src, snap, [], v.item, baseline=False)  # and then moved
+    db.commit()
+    db.close()
+
+    feed_ids = {e["item"]["id"] for e in client.get("/api/feed").json()["entries"]}
+    assert news_id in feed_ids and exam_id not in feed_ids
+    assert "ANATOMIA" not in client.get("/rss.xml").text
+    assert "ANATOMIA" in client.get(f"/rss/{src.slug}.xml").text  # its own feed keeps them
+    assert exam_id in {x["id"] for x in client.get("/api/exams").json()["exams"]}
